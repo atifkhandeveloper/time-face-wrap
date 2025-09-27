@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:aapt="http://schemas.android.com/aapt" android:layout_width="wrap_content" android:layout_height="wrap_content" app:cardCornerRadius="10dp" app:cardElevation="5dp">
+    <LinearLayout android:orientation="vertical" android:paddingTop="10dp" android:paddingBottom="20dp" android:layout_width="wrap_content" android:layout_height="match_parent">
+        <ImageView android:layout_width="wrap_content" android:layout_height="200dp" android:src="@drawable/no_internet"/>
+        <TextView android:textSize="22sp" android:textStyle="bold" android:textColor="@color/black" android:layout_gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="NO INTERNET"/>
+        <TextView android:textSize="18sp" android:textStyle="normal" android:layout_gravity="center" android:paddingLeft="20dp" android:paddingRight="20dp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="You have to turn on internet connection"/>
+        <TextView android:textSize="18sp" android:textStyle="bold" android:textColor="@color/white" android:gravity="center" android:layout_gravity="center" android:id="@+id/tvClose" android:background="@drawable/dark_view_bg" android:layout_width="150dp" android:layout_height="45dp" android:layout_marginTop="20dp" android:text="Close"/>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

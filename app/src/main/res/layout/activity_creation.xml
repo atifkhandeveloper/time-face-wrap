@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/screen_bg"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/btm1"
+        android:orientation="vertical">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize">
+
+            <ImageView
+                android:id="@+id/iv_back"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:src="@drawable/ic_back" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:fontFamily="@font/poppins_semibold"
+                android:text="My Work"
+                android:textColor="@color/black"
+                android:textSize="@dimen/_15sdp" />
+        </RelativeLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="@dimen/_5sdp"
+            android:layout_marginRight="@dimen/_5sdp"
+            android:orientation="horizontal"
+            android:weightSum="1"
+            android:gravity="center" >
+
+            <TextView
+                android:id="@+id/txt_wrap_image"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_centerInParent="true"
+                android:layout_margin="@dimen/_5sdp"
+                android:layout_weight="0.44"
+                android:background="@drawable/dark_view_bg"
+                android:fontFamily="@font/poppins_semibold"
+                android:gravity="center"
+                android:paddingLeft="@dimen/_5sdp"
+                android:paddingTop="@dimen/_12sdp"
+                android:paddingRight="@dimen/_5sdp"
+                android:paddingBottom="@dimen/_12sdp"
+                android:text="Wrap Image"
+                android:textColor="@color/white"
+                android:textSize="@dimen/_13sdp" />
+
+            <TextView
+                android:id="@+id/txt_waterfall_video"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:layout_margin="@dimen/_5sdp"
+                android:layout_weight="0.44"
+                android:fontFamily="@font/poppins_semibold"
+                android:gravity="center"
+                android:paddingLeft="@dimen/_3sdp"
+                android:paddingTop="@dimen/_12sdp"
+                android:paddingRight="@dimen/_3sdp"
+                android:paddingBottom="@dimen/_12sdp"
+                android:text="Waterfall Video"
+                android:textColor="@color/black"
+                android:textSize="@dimen/_13sdp" />
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvGallery"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="@dimen/_10sdp"
+            android:background="@color/screen_bg"
+            android:visibility="visible"
+            app:layoutManager="LinearLayoutManager" />
+
+        <TextView
+            android:id="@+id/txtNoRecording"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_centerInParent="true"
+            android:layout_gravity="center"
+            android:fontFamily="@font/poppins_semibold"
+            android:gravity="center"
+            android:text="No recordings found."
+            android:textColor="@color/black"
+            android:textSize="@dimen/_13sdp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <RelativeLayout
+        android:id="@+id/btm1"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:gravity="center"
+        android:layout_alignParentBottom="true">
+
+
+    </RelativeLayout>
+
+</RelativeLayout>

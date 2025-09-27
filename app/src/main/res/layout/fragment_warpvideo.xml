@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/recordingMainLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <com.myapps.timewrap.Wrapvideo.base.WarpVideoView.RecordableSurfaceView
+        android:id="@+id/surface_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <RelativeLayout
+        android:id="@+id/rvBottom"
+        android:layout_width="match_parent"
+        android:layout_height="95dp"
+        android:layout_alignParentBottom="true">
+
+        <RelativeLayout
+            android:id="@+id/btn_record"
+            android:layout_width="65dp"
+            android:layout_height="65dp"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="30dp"
+            android:clickable="true">
+
+            <LinearLayout
+                android:id="@+id/circle_shape"
+                android:layout_width="65dp"
+                android:layout_height="65dp"
+                android:layout_centerInParent="true"
+                android:layout_gravity="center"
+                android:background="@drawable/btn_camera"
+                android:orientation="horizontal"
+                android:visibility="visible" />
+
+            <LinearLayout
+                android:id="@+id/square_button"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_centerInParent="true"
+                android:layout_gravity="center"
+                android:background="@drawable/btn_pause"
+                android:orientation="horizontal"
+                android:visibility="invisible" />
+        </RelativeLayout>
+
+        <ImageView
+            android:id="@+id/fabSwap"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginStart="@dimen/large_margin"
+            android:layout_marginTop="@dimen/large_margin"
+            android:layout_marginEnd="@dimen/_20sdp"
+            android:layout_marginBottom="@dimen/_30sdp"
+            android:backgroundTint="@color/transparent"
+            android:src="@drawable/ic_rotate"
+            app:elevation="0dp"
+            app:fabCustomSize="48dp"
+            app:fabSize="normal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:maxImageSize="28dp"
+            app:pressedTranslationZ="12dp" />
+    </RelativeLayout>
+    <RelativeLayout android:id="@+id/loadingLayout" android:layout_width="match_parent" android:layout_height="match_parent">
+        <ProgressBar android:layout_gravity="center" android:id="@+id/simpleProgressBar" android:layout_width="50dp" android:layout_height="50dp" android:layout_centerInParent="true" android:progressTint="@color/selectedColor" android:indeterminateTint="@color/snow"/>
+        <TextView android:textStyle="bold" android:textColor="@color/colorPrimary" android:layout_gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/common_margin" android:text="Preparing" android:layout_below="@+id/simpleProgressBar" android:layout_centerInParent="true"/>
+    </RelativeLayout>
+    <LinearLayout android:id="@+id/llMenuTop" android:layout_width="wrap_content" android:layout_height="50dp" android:layout_alignParentRight="true">
+        <ImageView android:id="@+id/ivShape" android:padding="7dp" android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/shape" android:layout_toLeftOf="@+id/ivSpeed"/>
+        <ImageView android:id="@+id/ivSpeed" android:padding="7dp" android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/speed"/>
+    </LinearLayout>
+    <LinearLayout android:orientation="vertical" android:id="@+id/llOptionSpeed" android:visibility="invisible" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_below="@+id/llMenuTop" android:layout_alignParentRight="true">
+        <TextView android:textSize="@dimen/_10sdp" android:textColor="@color/white" android:gravity="center" android:id="@+id/txt_three_x" android:padding="7dp" android:layout_width="40dp" android:layout_height="40dp" android:layout_margin="5dp" android:text="3X" android:fontFamily="@font/poppins_semibold"/>
+        <TextView android:textSize="@dimen/_10sdp" android:textColor="@color/white" android:gravity="center" android:id="@+id/txt_two_x" android:padding="7dp" android:layout_width="40dp" android:layout_height="40dp" android:layout_margin="5dp" android:text="2X" android:fontFamily="@font/poppins_semibold"/>
+        <TextView android:textSize="@dimen/_10sdp" android:textColor="@color/white" android:gravity="center" android:id="@+id/txt_one_x" android:padding="7dp" android:layout_width="40dp" android:layout_height="40dp" android:layout_margin="5dp" android:text="1X" android:fontFamily="@font/poppins_semibold"/>
+    </LinearLayout>
+    <LinearLayout android:orientation="vertical" android:id="@+id/llOptionShape" android:visibility="invisible" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toLeftOf="@+id/llOptionSpeed" android:layout_below="@+id/llMenuTop">
+        <ImageView android:id="@+id/iv_zig_zap" android:padding="7dp" android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/ic_zigzag"/>
+        <ImageView android:id="@+id/iv_round" android:padding="7dp" android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/ic_curve"/>
+        <ImageView android:id="@+id/iv_line" android:padding="7dp" android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/ic_line_hover"/>
+    </LinearLayout>
+    <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_margin="10dp" android:layout_above="@+id/rvBottom" android:layout_centerHorizontal="true">
+        <ImageView android:id="@+id/iv_horizontal" android:padding="5dp" android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/ic_horizantal"/>
+        <ImageView android:id="@+id/iv_vertical" android:padding="5dp" android:visibility="visible" android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/ic_vertical_hover"/>
+    </LinearLayout>
+</RelativeLayout>

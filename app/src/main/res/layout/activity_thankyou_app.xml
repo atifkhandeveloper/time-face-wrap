@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorlight" >
+
+    <RelativeLayout
+        android:id="@+id/top"
+        android:visibility="gone"
+        android:background="@drawable/mainbox"
+        android:layout_alignParentTop="true"
+        android:layout_width="match_parent"
+        android:layout_height="55dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fontFamily="@font/regular"
+                android:gravity="center"
+                android:singleLine="true"
+                android:textStyle="bold"
+                android:text="Thank You"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
+
+        </RelativeLayout>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_above="@+id/btm1"
+        android:layout_below="@+id/top"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.core.widget.NestedScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_above="@+id/thankbottom">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:orientation="vertical">
+
+
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="30dp"/>
+
+                    <ImageView
+                        android:src="@drawable/iithankyou"
+                        android:layout_width="120dp"
+                        android:layout_height="120dp"/>
+
+                </LinearLayout>
+
+            </androidx.core.widget.NestedScrollView>
+
+            <LinearLayout
+                android:id="@+id/thankbottom"
+                android:layout_alignParentBottom="true"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="85dp"
+                android:weightSum="2">
+
+                <LinearLayout
+                    android:gravity="center"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <RelativeLayout
+                        android:id="@+id/rate"
+                        android:gravity="center"
+                        android:background="@drawable/ratebox"
+                        android:layout_width="150dp"
+                        android:layout_height="50dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:fontFamily="@font/regular"
+                            android:gravity="center"
+                            android:text="RATE APP"
+                            android:textColor="@color/white"
+                            android:textSize="15dp" />
+
+                    </RelativeLayout>
+
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:gravity="center"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <RelativeLayout
+                        android:id="@+id/exitapp"
+                        android:background="@drawable/ratebox"
+                        android:layout_width="150dp"
+                        android:layout_height="50dp"
+                        android:gravity="center">
+
+                        <TextView
+                            android:textSize="15dp"
+                            android:textColor="@color/white"
+                            android:fontFamily="@font/regular"
+                            android:gravity="center"
+                            android:text="EXIT"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"/>
+
+                    </RelativeLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </RelativeLayout>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/btm1"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:layout_alignParentBottom="true">
+
+
+    </RelativeLayout>
+
+</RelativeLayout>

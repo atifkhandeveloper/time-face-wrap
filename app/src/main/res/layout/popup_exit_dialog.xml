@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#7d000000" >
+
+    <LinearLayout
+        android:id="@+id/dialogexit"
+        android:layout_marginRight="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="450dp"
+        android:layout_centerInParent="true"
+        android:background="@drawable/roundcornerapp"
+        android:orientation="vertical"
+        android:paddingBottom="8dp">
+
+        <RelativeLayout
+            android:layout_margin="10dp"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/etop"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/avenirltstd_medium"
+                android:gravity="center"
+                android:text="Do you want to Exit?"
+                android:textColor="@color/black"
+                android:textSize="18dp" />
+
+            <RelativeLayout
+                android:gravity="center"
+                android:layout_below="@+id/etop"
+                android:layout_above="@+id/ebottom"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:orientation="vertical">
+
+
+                </LinearLayout>
+
+            </RelativeLayout>
+
+            <LinearLayout
+                android:id="@+id/ebottom"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_alignParentBottom="true"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:weightSum="3">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center">
+
+                    <RelativeLayout
+                        android:id="@+id/no"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_marginLeft="5dp"
+                        android:layout_marginTop="3dp"
+                        android:layout_marginRight="5dp"
+                        android:layout_marginBottom="3dp"
+                        android:background="@drawable/ratebox"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/tondo_bold"
+                            android:gravity="center"
+                            android:text="No"
+                            android:textColor="@color/white"
+                            android:textSize="15sp" />
+
+                    </RelativeLayout>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center">
+
+                    <RelativeLayout
+                        android:id="@+id/rate"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_marginLeft="5dp"
+                        android:layout_marginTop="3dp"
+                        android:layout_marginRight="5dp"
+                        android:layout_marginBottom="3dp"
+                        android:background="@drawable/ratebox"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/tondo_bold"
+                            android:gravity="center"
+                            android:text="Rate Us"
+                            android:textColor="@color/white"
+                            android:textSize="15sp" />
+
+                    </RelativeLayout>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center">
+
+                    <RelativeLayout
+                        android:id="@+id/yes"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_marginLeft="5dp"
+                        android:layout_marginTop="3dp"
+                        android:layout_marginRight="5dp"
+                        android:layout_marginBottom="3dp"
+                        android:background="@drawable/ratebox"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/tondo_bold"
+                            android:gravity="center"
+                            android:text="Yes"
+                            android:textColor="@color/white"
+                            android:textSize="15sp" />
+
+                    </RelativeLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </RelativeLayout>
+
+    </LinearLayout>
+
+</RelativeLayout>

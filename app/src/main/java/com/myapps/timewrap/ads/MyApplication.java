@@ -7,9 +7,9 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 
+import com.google.android.gms.ads.MobileAds;
 import com.myapps.timewrap.Utils.SpUtil;
-import com.unity3d.ads.IUnityAdsInitializationListener;
-import com.unity3d.ads.UnityAds;
+
 
 
 import java.util.ArrayList;
@@ -33,44 +33,10 @@ public class MyApplication extends Application implements Application.ActivityLi
     private AppOpenAdManager appOpenAdManager;
     private Activity currentActivity;
 
-    private static final String UNITY_GAME_ID = "5937712"; // from Unity Dashboard
-    private static final boolean TEST_MODE = false;
-
-
-    /*public static String AdMob_Banner = "";
-    public static String AdMob_Int = "";
-    public static String AdMob_Int2 = "";
-    public static String AdMob_NativeAdvance = "";
-    public static String AdMob_NativeAdvance2 = "";
-    public static String App_Open = "";*/
-
-    //test ads id admob
-
-
 
     public static Context context1;
 
 
-    public static String FbBanner = "";
-    public static String Fbnative = "";
-    public static String FbInter = "";
-    public static String FbNativeB = "";
-
-
-    //test ads id fb
-   /* public static String FbBanner = "IMG_16_9_APP_INSTALL#YOUR_PLACEMENT_ID";
-    public static String Fbnative = "IMG_16_9_APP_INSTALL#YOUR_PLACEMENT_ID";
-    public static String FbInter = "IMG_16_9_APP_INSTALL#YOUR_PLACEMENT_ID";
-    public static String FbNativeB = "IMG_16_9_APP_INSTALL#YOUR_PLACEMENT_ID";*/
-
-
-    public static String MAX_Banner = "";
-    public static String MAX_Int = "";
-    public static String MAX_Native = "";
-
-    /*public static String MAX_Banner = "ffad804ad2a0368e";
-    public static String MAX_Int = "096bd87a62a84493";
-    public static String MAX_Native = "a3bc1621ddcc28b4";*/
 
 
     public static String Type = "admob";   //admob | fb | max | mix
@@ -91,6 +57,13 @@ public class MyApplication extends Application implements Application.ActivityLi
         super.onCreate();
         this.registerActivityLifecycleCallbacks(this);
 
+        new Thread(
+                () -> {
+                    // Initialize the Google Mobile Ads SDK on a background thread.
+                    MobileAds.initialize(this, initializationStatus -> {});
+                })
+                .start();
+
 
         sharedPreferencesInApp = getSharedPreferences("my", MODE_PRIVATE);
         editorInApp = sharedPreferencesInApp.edit();
@@ -101,18 +74,6 @@ public class MyApplication extends Application implements Application.ActivityLi
 
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
         appOpenAdManager = new AppOpenAdManager();
-
-        UnityAds.initialize(this, UNITY_GAME_ID, TEST_MODE, new IUnityAdsInitializationListener() {
-            @Override
-            public void onInitializationComplete() {
-                Log.d("UnityAds", "Initialization complete.");
-            }
-
-            @Override
-            public void onInitializationFailed(UnityAds.UnityAdsInitializationError error, String message) {
-                Log.e("UnityAds", "Initialization failed: " + error + " - " + message);
-            }
-        });
 
 
 

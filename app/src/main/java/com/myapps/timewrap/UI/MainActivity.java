@@ -13,10 +13,7 @@ import android.widget.RelativeLayout;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.myapps.timewrap.R;
-import com.myapps.timewrap.splashAds.FirstPageMainActivity;
-import com.unity3d.ads.IUnityAdsLoadListener;
-import com.unity3d.ads.IUnityAdsShowListener;
-import com.unity3d.ads.UnityAds;
+
 
 
 public class MainActivity extends AppCompatActivity {
@@ -43,29 +40,25 @@ public class MainActivity extends AppCompatActivity {
 
 
         initView();
-        loadAd();
+
 
     }
 
 
     public void initView() {
 
-        this.ivMyWork = (ImageView) findViewById(R.id.iv_my_work);
+        this.ivMyWork = (ImageView) findViewById(R.id.iv_wrap_video);
         this.ivWrapImage = (ImageView) findViewById(R.id.iv_wrap_image);
-        this.ivWrapVideo = (ImageView) findViewById(R.id.iv_wrap_video);
+//        this.ivWrapVideo = (ImageView) findViewById(R.id.iv_wrap_video);
         this.ivWaterfallVideo = (ImageView) findViewById(R.id.iv_waterfall_video);
-        this.ivSettings = (ImageView) findViewById(R.id.iv_settings);
+        this.ivSettings = (ImageView) findViewById(R.id.settings);
         this.ivWrapImage.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                showAd();
-            }
-        });
-        this.ivWrapVideo.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, CreationActivity.class);
+                Intent intent = new Intent(MainActivity.this, WrapImageActivity.class);
                 startActivity(intent);
             }
         });
+
         this.ivWaterfallVideo.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 Intent intent = new Intent(MainActivity.this, WaterFallActivity.class);
@@ -108,49 +101,6 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-    public void loadAd() {
-        UnityAds.load(INTERSTITIAL_ID, new IUnityAdsLoadListener() {
-            @Override
-            public void onUnityAdsAdLoaded(String placementId) {
-                Log.d("UnityAds", "Ad loaded: " + placementId);
-                showAd(); // You can show right away or later
-            }
 
-            @Override
-            public void onUnityAdsFailedToLoad(String placementId, UnityAds.UnityAdsLoadError error, String message) {
-                Log.e("UnityAds", "Failed to load: " + placementId + " - " + error + " - " + message);
-            }
-        });
-    }
-
-    public void showAd() {
-        UnityAds.show(this, INTERSTITIAL_ID, new IUnityAdsShowListener() {
-            @Override
-            public void onUnityAdsShowStart(String placementId) {
-                Log.d("UnityAds", "Ad started: " + placementId);
-            }
-
-            @Override
-            public void onUnityAdsShowClick(String placementId) {
-                Log.d("UnityAds", "Ad clicked: " + placementId);
-            }
-
-            @Override
-            public void onUnityAdsShowComplete(String placementId, UnityAds.UnityAdsShowCompletionState state) {
-                Log.d("UnityAds", "Ad completed: " + placementId + " - " + state);
-                Intent intent = new Intent(MainActivity.this, WrapImageActivity.class);
-                startActivity(intent);
-
-            }
-
-            @Override
-            public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
-                Log.e("UnityAds", "Ad failed: " + placementId + " - " + error + " - " + message);
-                Intent intent = new Intent(MainActivity.this, WrapImageActivity.class);
-                startActivity(intent);
-
-            }
-        });
-    }
 
 }

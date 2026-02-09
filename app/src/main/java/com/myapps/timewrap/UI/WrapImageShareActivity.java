@@ -56,7 +56,7 @@ public class WrapImageShareActivity extends AppCompatActivity {
             this.isFrom = extras.getString("from");
         }
         if (this.isFrom.equalsIgnoreCase(C1197util.MyWork)) {
-            ((RequestBuilder) ((RequestBuilder) Glide.with((FragmentActivity) this).load(C1197util.wrapImagePath).placeholder((int) R.drawable.logo)).error((int) R.drawable.logo)).into(this.previewViewImageView);
+            ((RequestBuilder) ((RequestBuilder) Glide.with((FragmentActivity) this).load(C1197util.wrapImagePath).placeholder((int) R.drawable.icon)).error((int) R.drawable.icon)).into(this.previewViewImageView);
         } else {
             Bitmap bitmap = C1197util.bitmap;
             this.resultBitmap = bitmap;

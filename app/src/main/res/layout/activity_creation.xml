@@ -15,13 +15,15 @@
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize">
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/primarymain">
 
             <ImageView
                 android:id="@+id/iv_back"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:src="@drawable/ic_back" />
+                android:src="@drawable/ic_back"
+                app:tint="@color/white" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -29,7 +31,7 @@
                 android:layout_centerInParent="true"
                 android:fontFamily="@font/poppins_semibold"
                 android:text="My Work"
-                android:textColor="@color/black"
+                android:textColor="@color/white"
                 android:textSize="@dimen/_15sdp" />
         </RelativeLayout>
 

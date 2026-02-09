@@ -57,14 +57,14 @@ public class CreationAdapter extends RecyclerView.Adapter<CreationAdapter.ViewHo
     public void onBindViewHolder(final ViewHolder viewHolder, int i) {
         viewHolder.mItem = this.mValues.get(i);
         if (this.type.equalsIgnoreCase(C1197util.wrapImage)) {
-            ((RequestBuilder) ((RequestBuilder) ((RequestBuilder) ((RequestBuilder) Glide.with(this.mContext).load(this.mValues.get(i).getRealPath()).placeholder((int) R.drawable.logo)).diskCacheStrategy(DiskCacheStrategy.NONE)).skipMemoryCache(true)).error((int) R.drawable.logo)).into(viewHolder.mContentView);
+            ((RequestBuilder) ((RequestBuilder) ((RequestBuilder) ((RequestBuilder) Glide.with(this.mContext).load(this.mValues.get(i).getRealPath()).placeholder((int) R.drawable.icon)).diskCacheStrategy(DiskCacheStrategy.NONE)).skipMemoryCache(true)).error((int) R.drawable.icon)).into(viewHolder.mContentView);
         } else if (this.type.equalsIgnoreCase(C1197util.wrapVideo)) {
             viewHolder.mContentView.setImageURI(this.mValues.get(i).getUri());
             if (viewHolder.mItem.getBitmap() == null) {
                 new BitmapWorkerTask(viewHolder.mContentView).execute(new Video[]{viewHolder.mItem});
             }
         } else if (this.type.equalsIgnoreCase(C1197util.waterfallVideo)) {
-            viewHolder.mContentView.setImageResource(R.drawable.logo);
+            viewHolder.mContentView.setImageResource(R.drawable.icon);
             //viewHolder.mContentView.setImageURI(this.mValues.get(i).getUri());
             if (viewHolder.mItem.getBitmap() == null) {
                 new BitmapWorkerTask(viewHolder.mContentView).execute(new Video[]{viewHolder.mItem});
@@ -125,7 +125,7 @@ public class CreationAdapter extends RecyclerView.Adapter<CreationAdapter.ViewHo
             ImageView imageView;
             WeakReference<ImageView> weakReference = this.imageViewReference;
             if (weakReference != null && bitmap != null && (imageView = (ImageView) weakReference.get()) != null) {
-                ((RequestBuilder) ((RequestBuilder) ((RequestBuilder) ((RequestBuilder) ((RequestBuilder) Glide.with(CreationAdapter.this.mContext).load(bitmap).placeholder((int) R.drawable.logo)).error((int) R.drawable.logo)).diskCacheStrategy(DiskCacheStrategy.NONE)).skipMemoryCache(true)).override(200, 200)).into(imageView);
+                ((RequestBuilder) ((RequestBuilder) ((RequestBuilder) ((RequestBuilder) ((RequestBuilder) Glide.with(CreationAdapter.this.mContext).load(bitmap).placeholder((int) R.drawable.icon)).error((int) R.drawable.icon)).diskCacheStrategy(DiskCacheStrategy.NONE)).skipMemoryCache(true)).override(200, 200)).into(imageView);
             }
         }
     }

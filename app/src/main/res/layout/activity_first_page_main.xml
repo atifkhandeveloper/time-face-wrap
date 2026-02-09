@@ -4,281 +4,61 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/colorlight" >
+    android:background="@drawable/bg" >
+
+
 
     <RelativeLayout
-        android:id="@+id/top"
-        android:background="@drawable/mainbox"
-        android:layout_alignParentTop="true"
-        android:layout_width="match_parent"
-        android:layout_height="55dp">
-
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:fontFamily="@font/regular"
-                android:gravity="center"
-                android:singleLine="true"
-                android:text="@string/app_name"
-                android:textColor="@color/white"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-        </RelativeLayout>
-
-    </RelativeLayout>
-
-    <RelativeLayout
-        android:layout_below="@+id/top"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <androidx.core.widget.NestedScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_above="@+id/btm1"
-            android:layout_marginTop="3dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Welcome To\n Time Warp Scan"
+            android:textColor="@color/white"
+            android:textSize="@dimen/_40sdp"
+            android:textStyle="bold"
+            android:textAlignment="center"
+            android:layout_above="@+id/start"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="@dimen/_50sdp"/>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_margin="5dp" >
-
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical">
 
                         <LinearLayout
+                            android:id="@+id/start"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical">
+                            android:orientation="vertical"
+                            android:layout_alignParentBottom="true"
+                            android:layout_marginBottom="50dp">
 
                             <LinearLayout
                                 android:id="@+id/btnstart"
-                                android:layout_width="match_parent"
+                                android:layout_width="200dp"
                                 android:layout_height="wrap_content"
                                 android:layout_marginLeft="20dp"
                                 android:layout_marginTop="5dp"
                                 android:layout_marginRight="20dp"
-                                android:background="@drawable/roundbtnallapp"
+                                android:background="@drawable/ad_btn_install"
                                 android:orientation="horizontal"
+                                android:layout_gravity="center_horizontal"
                                 android:padding="20dp">
 
-                                <ImageView
-                                    android:layout_width="30dp"
-                                    android:layout_height="30dp"
-                                    android:layout_gravity="center"
-                                    android:layout_marginLeft="5dp"
-                                    android:adjustViewBounds="true"
-                                    android:src="@drawable/start_app" />
 
                                 <TextView
-                                    android:layout_marginLeft="15dp"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_gravity="center"
                                     android:layout_weight="1"
                                     android:fontFamily="@font/regular"
-                                    android:gravity="center_vertical"
+                                    android:gravity="center_horizontal"
                                     android:includeFontPadding="false"
-                                    android:text="Start App"
-                                    android:textColor="#b3172635"
+                                    android:text="Dive In"
+                                    android:textColor="@color/white"
                                     android:textSize="18dp" />
 
-                                <ImageView
-                                    android:layout_width="14dp"
-                                    android:layout_height="14dp"
-                                    android:layout_gravity="center"
-                                    android:adjustViewBounds="true"
-                                    android:src="@drawable/next" />
 
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/btnrate"
-                                android:visibility="gone"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginLeft="20dp"
-                                android:layout_marginTop="5dp"
-                                android:layout_marginRight="20dp"
-                                android:background="@drawable/roundbtnallapp"
-                                android:orientation="horizontal"
-                                android:padding="20dp">
-
-                                <ImageView
-                                    android:layout_width="30dp"
-                                    android:layout_height="30dp"
-                                    android:layout_gravity="center"
-                                    android:layout_marginLeft="5dp"
-                                    android:adjustViewBounds="true"
-                                    android:src="@drawable/rate" />
-
-                                <TextView
-                                    android:layout_marginLeft="15dp"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center"
-                                    android:layout_weight="1"
-                                    android:fontFamily="@font/regular"
-                                    android:gravity="center_vertical"
-                                    android:includeFontPadding="false"
-                                    android:text="Rate Us"
-                                    android:textColor="#b3172635"
-                                    android:textSize="18dp" />
-
-                                <ImageView
-                                    android:layout_width="14dp"
-                                    android:layout_height="14dp"
-                                    android:layout_gravity="center"
-                                    android:adjustViewBounds="true"
-                                    android:src="@drawable/next" />
-
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/btnshare"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginLeft="20dp"
-                                android:layout_marginTop="5dp"
-                                android:layout_marginRight="20dp"
-                                android:background="@drawable/roundbtnallapp"
-                                android:orientation="horizontal"
-                                android:padding="20dp">
-
-                                <ImageView
-                                    android:layout_width="30dp"
-                                    android:layout_height="30dp"
-                                    android:layout_gravity="center"
-                                    android:layout_marginLeft="5dp"
-                                    android:adjustViewBounds="true"
-                                    android:src="@drawable/shares" />
-
-                                <TextView
-                                    android:layout_marginLeft="15dp"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center"
-                                    android:layout_weight="1"
-                                    android:fontFamily="@font/regular"
-                                    android:gravity="center_vertical"
-                                    android:includeFontPadding="false"
-                                    android:text="Share app"
-                                    android:textColor="#b3172635"
-                                    android:textSize="18dp" />
-
-                                <ImageView
-                                    android:layout_width="14dp"
-                                    android:layout_height="14dp"
-                                    android:layout_gravity="center"
-                                    android:adjustViewBounds="true"
-                                    android:src="@drawable/next" />
-
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/btnmore"
-                                android:visibility="gone"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginLeft="20dp"
-                                android:layout_marginTop="5dp"
-                                android:layout_marginRight="20dp"
-                                android:background="@drawable/roundbtnallapp"
-                                android:orientation="horizontal"
-                                android:padding="20dp">
-
-                                <ImageView
-                                    android:layout_width="30dp"
-                                    android:layout_height="30dp"
-                                    android:layout_gravity="center"
-                                    android:layout_marginLeft="5dp"
-                                    android:adjustViewBounds="true"
-                                    android:src="@drawable/more_apps" />
-
-                                <TextView
-                                    android:layout_marginLeft="15dp"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center"
-                                    android:layout_weight="1"
-                                    android:fontFamily="@font/regular"
-                                    android:gravity="center_vertical"
-                                    android:includeFontPadding="false"
-                                    android:text="More Apps (Ad)"
-                                    android:textColor="#b3172635"
-                                    android:textSize="18dp" />
-
-                                <ImageView
-                                    android:layout_width="14dp"
-                                    android:layout_height="14dp"
-                                    android:layout_gravity="center"
-                                    android:adjustViewBounds="true"
-                                    android:src="@drawable/next" />
-
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/btnprivacy"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginLeft="20dp"
-                                android:layout_marginTop="5dp"
-                                android:layout_marginRight="20dp"
-                                android:background="@drawable/roundbtnallapp"
-                                android:orientation="horizontal"
-                                android:padding="20dp">
-
-                                <ImageView
-                                    android:layout_width="30dp"
-                                    android:layout_height="30dp"
-                                    android:layout_gravity="center"
-                                    android:layout_marginLeft="5dp"
-                                    android:adjustViewBounds="true"
-                                    android:src="@drawable/privacy" />
-
-                                <TextView
-                                    android:layout_marginLeft="15dp"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center"
-                                    android:layout_weight="1"
-                                    android:fontFamily="@font/regular"
-                                    android:gravity="center_vertical"
-                                    android:includeFontPadding="false"
-                                    android:text="Privacy"
-                                    android:textColor="#b3172635"
-                                    android:textSize="18dp" />
-
-                                <ImageView
-                                    android:layout_width="14dp"
-                                    android:layout_height="14dp"
-                                    android:layout_gravity="center"
-                                    android:adjustViewBounds="true"
-                                    android:src="@drawable/next" />
-
-                            </LinearLayout>
 
                         </LinearLayout>
 
@@ -289,15 +69,9 @@
 
                     </LinearLayout>
 
-                </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="5dp" />
 
-            </LinearLayout>
 
-        </androidx.core.widget.NestedScrollView>
 
         <RelativeLayout
             android:id="@+id/btm1"
@@ -306,9 +80,18 @@
             android:gravity="center"
             android:layout_alignParentBottom="true">
 
+            <FrameLayout
+                android:id="@+id/ad_view_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:layout_alignParentBottom="true" />
+
 
         </RelativeLayout>
 
     </RelativeLayout>
+
+
 
 </RelativeLayout>

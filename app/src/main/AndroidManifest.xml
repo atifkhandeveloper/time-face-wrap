@@ -56,12 +56,14 @@
         android:supportsRtl="true"
         android:theme="@style/TimeWarpScanner">
 
+        <!-- Sample AdMob app ID: ca-app-pub-3940256099942544~3347511713 -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
+
         <meta-data
             android:name="com.google.android.gms.ads.AD_MANAGER_APP"
             android:value="true" />
-        <meta-data
-            android:name="applovin.sdk.key"
-            android:value="9Mmo8af6r9Ra2RlaxqaPqUD6h8bhmuJpNkThxJR6Vgd7pr03LiTSe7pe9CwCf4l0HrX2f2lTK-P6HrH-RGeIq8" />
 
 
         <activity

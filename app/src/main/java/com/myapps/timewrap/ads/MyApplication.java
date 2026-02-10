@@ -1,183 +1,173 @@
 package com.myapps.timewrap.ads;
 
+import static android.content.ContentValues.TAG;
+
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.google.android.gms.ads.MobileAds;
-import com.myapps.timewrap.Utils.SpUtil;
-
-
-
-import java.util.ArrayList;
-import java.util.Date;
-
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleObserver;
-import androidx.lifecycle.OnLifecycleEvent;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.multidex.MultiDex;
 
-public class MyApplication extends Application implements Application.ActivityLifecycleCallbacks, LifecycleObserver {
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.appopen.AppOpenAd;
+import com.google.firebase.FirebaseApp;
+import com.myapps.timewrap.R;
 
-    private static final String ONESIGNAL_APP_ID = "";  //add your one signal key
+import java.util.Date;
 
-    public static SharedPreferences sharedPreferencesInApp;
-    public static SharedPreferences.Editor editorInApp;
+public class MyApplication extends Application
+        implements Application.ActivityLifecycleCallbacks, DefaultLifecycleObserver {
 
-    private AppOpenAdManager appOpenAdManager;
     private Activity currentActivity;
-
-
-    public static Context context1;
-
-
-
-
-    public static String Type = "admob";   //admob | fb | max | mix
-
-
-    public static int click = 4;
-    public static int backclick = 4;
-    public static int click1 = 0;
-
-    public static String MoreApps = "";
-    public static String PrivacyPolicy = "";
-
-    public static String strMAX = "max"; // strMAX & Type value is same
-
+    private AppOpenAdManager appOpenAdManager;
+    private boolean isAppInBackground = true;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        this.registerActivityLifecycleCallbacks(this);
 
-        new Thread(
-                () -> {
-                    // Initialize the Google Mobile Ads SDK on a background thread.
-                    MobileAds.initialize(this, initializationStatus -> {});
-                })
-                .start();
-
-
-        sharedPreferencesInApp = getSharedPreferences("my", MODE_PRIVATE);
-        editorInApp = sharedPreferencesInApp.edit();
-
-
-        context1 = getApplicationContext();
-
-
-        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
-        appOpenAdManager = new AppOpenAdManager();
-
-
-
-        /*app code*/
-        SpUtil.getInstance().init(context1);
-    }
-
-    @Override
-    public void attachBaseContext(Context context) {
-        super.attachBaseContext(context);
         MultiDex.install(this);
+        FirebaseApp.initializeApp(this);
+        MobileAds.initialize(this);
+
+        registerActivityLifecycleCallbacks(this);
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+
+        appOpenAdManager = new AppOpenAdManager(this);
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_START)
-    protected void onMoveToForeground() {
-        // Show the ad (if available) when the app moves to foreground.
+    // ================= SPLASH =================
+
+    public void showAdAfterSplash(Activity activity, Runnable onFinish) {
+        appOpenAdManager.showAdIfAvailable(activity, onFinish);
     }
+
+    // ================= FOREGROUND DETECTION =================
 
     @Override
-    public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {
-    }
-
-    @Override
-    public void onActivityStarted(@NonNull Activity activity) {
-        if (!appOpenAdManager.isShowingAd) {
-            currentActivity = activity;
+    public void onStart(@NonNull LifecycleOwner owner) {
+        if (currentActivity != null && isAppInBackground) {
+            appOpenAdManager.showAdIfAvailable(currentActivity, () -> {});
         }
+        isAppInBackground = false;
     }
+
+    @Override
+    public void onStop(@NonNull LifecycleOwner owner) {
+        isAppInBackground = true;
+    }
+
+    // ================= ACTIVITY TRACKING =================
 
     @Override
     public void onActivityResumed(@NonNull Activity activity) {
+        currentActivity = activity;
+        appOpenAdManager.loadAd(activity);
     }
 
-    @Override
-    public void onActivityPaused(@NonNull Activity activity) {
-    }
+    @Override public void onActivityCreated(@NonNull Activity a, Bundle b) { currentActivity = a; }
+    @Override public void onActivityStarted(@NonNull Activity a) {}
+    @Override public void onActivityPaused(@NonNull Activity a) {}
+    @Override public void onActivityStopped(@NonNull Activity a) {}
+    @Override public void onActivitySaveInstanceState(@NonNull Activity a, Bundle b) {}
+    @Override public void onActivityDestroyed(@NonNull Activity a) {}
 
-    @Override
-    public void onActivityStopped(@NonNull Activity activity) {
-    }
+    // ================= AD MANAGER =================
 
-    @Override
-    public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {
-    }
+    private static class AppOpenAdManager {
 
-    @Override
-    public void onActivityDestroyed(@NonNull Activity activity) {
-    }
+        private final Context context;
+        private final String adUnitId;
 
-    public void showAdIfAvailable(
-            @NonNull Activity activity,
-            @NonNull OnShowAdCompleteListener onShowAdCompleteListener) {
-        appOpenAdManager.showAdIfAvailable(activity, onShowAdCompleteListener);
-    }
-
-    public interface OnShowAdCompleteListener {
-        void onShowAdComplete();
-    }
-
-    private class AppOpenAdManager {
-
-        private static final String LOG_TAG = "AppOpenAdManager";
-
-        private boolean isLoadingAd = false;
-        private boolean isShowingAd = false;
+        private AppOpenAd appOpenAd;
+        private boolean isLoading = false;
+        private boolean isShowing = false;
         private long loadTime = 0;
 
-
-        public AppOpenAdManager() {
+        AppOpenAdManager(Context ctx) {
+            context = ctx.getApplicationContext();
+            adUnitId = context.getString(R.string.appopen);
         }
 
+        boolean isAdValid() {
+            return appOpenAd != null &&
+                    (new Date().getTime() - loadTime) < 4 * 60 * 60 * 1000;
+        }
 
+        void loadAd(Context ctx) {
+            if (isLoading || isAdValid()) return;
 
+            isLoading = true;
 
+            AppOpenAd.load(
+                    ctx,
+                    adUnitId,
+                    new AdRequest.Builder().build(),
+                    new AppOpenAd.AppOpenAdLoadCallback() {
 
+                        @Override
+                        public void onAdLoaded(@NonNull AppOpenAd ad) {
+                            appOpenAd = ad;
+                            loadTime = new Date().getTime();
+                            isLoading = false;
+                            Log.d(TAG, "App Open Ad Loaded");
+                        }
 
+                        @Override
+                        public void onAdFailedToLoad(@NonNull LoadAdError error) {
+                            isLoading = false;
+                            Log.e(TAG, "Ad load failed: " + error.getMessage());
+                        }
+                    }
+            );
+        }
 
-        private void showAdIfAvailable(
-                @NonNull final Activity activity,
-                @NonNull OnShowAdCompleteListener onShowAdCompleteListener) {
-            if (isShowingAd) {
-                Log.d(LOG_TAG, "The app open ad is already showing.");
+        void showAdIfAvailable(Activity activity, Runnable onFinish) {
+
+            if (isShowing) return;
+
+            if (!isAdValid()) {
+                loadAd(activity);
+                onFinish.run();
                 return;
             }
 
+            appOpenAd.setFullScreenContentCallback(
+                    new FullScreenContentCallback() {
 
-            Log.d(LOG_TAG, "Will show ad.");
+                        @Override
+                        public void onAdDismissedFullScreenContent() {
+                            appOpenAd = null;
+                            isShowing = false;
+                            onFinish.run();
+                            loadAd(context);
+                        }
 
+                        @Override
+                        public void onAdFailedToShowFullScreenContent(AdError adError) {
+                            appOpenAd = null;
+                            isShowing = false;
+                            onFinish.run();
+                            loadAd(context);
+                        }
+
+                        @Override
+                        public void onAdShowedFullScreenContent() {
+                            isShowing = true;
+                        }
+                    });
+
+            appOpenAd.show(activity);
         }
     }
-
-    public static void setuser_balance(Integer user_balance) {
-        editorInApp.putInt("user_balance", user_balance).commit();
-    }
-    public static Integer getuser_balance() {
-        return sharedPreferencesInApp.getInt("user_balance", 0);
-    }
-
-    public static void setuser_onetime(Integer user_onetime) {
-        editorInApp.putInt("user_onetime", user_onetime).commit();
-    }
-    public static Integer getuser_onetime() {
-        return sharedPreferencesInApp.getInt("user_onetime", 0);
-    }
-
-
 }

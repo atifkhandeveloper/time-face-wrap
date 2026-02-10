@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.firebase.crashlytics.buildtools)
+    implementation(libs.firebase.common)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -100,5 +101,7 @@ dependencies {
     implementation("io.github.ParkSangGwon:tedpermission-normal:3.3.0")
     implementation("com.google.android.gms:play-services-ads:24.9.0")
     implementation("com.google.guava:guava:32.1.2-android")
+    implementation(project(":nativetemplates"))
+
 
 }

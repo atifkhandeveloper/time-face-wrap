@@ -38,7 +38,6 @@ public class PrivacyTermsActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), "Check above options to continue", Toast.LENGTH_SHORT).show();
                     return;
                 } else {
-                    MyApplication.setuser_onetime(1);
                     //startActivity(new Intent(activity, PermissionPageActivity.class));
                     startActivity(new Intent(activity, FirstPageMainActivity.class));
                 }

@@ -28,4 +28,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Time Wrap"
 include(":app")
- 
+include(":nativetemplates")

@@ -23,7 +23,6 @@ public class SplashActivity extends AppCompatActivity {
 
     String var;
 
-    private static final String INTERSTITIAL_ID = "Interstitial_Android";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,12 +30,14 @@ public class SplashActivity extends AppCompatActivity {
         setContentView(R.layout.activity_splash);
 
 
-
-        
-
         new Handler().postDelayed(new Runnable() {
             public void run() {
-                OpenAppAds();
+
+                MyApplication app = (MyApplication) getApplication();
+                app.showAdAfterSplash(SplashActivity.this, () -> {
+                    OpenAppAds();
+                });
+//                OpenAppAds();
             }
         }, 5000);
 
@@ -59,15 +60,10 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     private void loadOpenApp() {
-        if (MyApplication.getuser_onetime() == 0) {
 
             Intent i = new Intent(SplashActivity.this, PrivacyTermsActivity.class);
             startActivity(i);
 
-        }else {
-            Intent i = new Intent(SplashActivity.this, FirstPageMainActivity.class);
-            startActivity(i);
-        }
     }
 
 

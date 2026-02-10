@@ -12,6 +12,7 @@ constraintlayout = "2.2.1"
 agcp = "1.9.1.300"
 agconnect-core = "1.9.1.302"
 firebaseCrashlyticsBuildtools = "3.0.6"
+firebaseCommon = "22.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -24,6 +25,7 @@ androidx-activity = { group = "androidx.activity", name = "activity", version.re
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 agconnect-core = { group = "com.huawei.agconnect", name = "agconnect-core", version.ref = "agconnect-core" }
 firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
+firebase-common = { group = "com.google.firebase", name = "firebase-common", version.ref = "firebaseCommon" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

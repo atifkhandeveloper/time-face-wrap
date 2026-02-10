@@ -49,6 +49,7 @@ public class FirstPageMainActivity extends AppCompatActivity {
 
         adContainerView = findViewById(R.id.ad_view_container);
         loadBanner();
+        loadAd();
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -66,8 +67,8 @@ public class FirstPageMainActivity extends AppCompatActivity {
         ((LinearLayout) findViewById(R.id.btnstart)).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(FirstPageMainActivity.this, MainActivity.class);
-                startActivity(intent);
+                showInterstitial();
+
             }
         });
 
@@ -169,6 +170,8 @@ public class FirstPageMainActivity extends AppCompatActivity {
                                         // Make sure to set your reference to null so you don't
                                         // show it a second time.
                                         FirstPageMainActivity.this.interstitialAd = null;
+                                        Intent intent = new Intent(FirstPageMainActivity.this, MainActivity.class);
+                                        startActivity(intent);
                                     }
 
                                     @Override
@@ -215,8 +218,28 @@ public class FirstPageMainActivity extends AppCompatActivity {
                         Toast.makeText(
                                         FirstPageMainActivity.this, "onAdFailedToLoad() with error: " + error, Toast.LENGTH_SHORT)
                                 .show();
+                        Intent intent = new Intent(FirstPageMainActivity.this, MainActivity.class);
+                        startActivity(intent);
                     }
                 });
+    }
+
+
+    private void showInterstitial() {
+        // Show the ad if it's ready. Otherwise restart the game.
+        // [START show_ad]
+        if (interstitialAd != null) {
+            interstitialAd.show(this);
+        } else {
+            Log.d(TAG, "The interstitial ad is still loading.");
+            // [START_EXCLUDE silent]
+            Intent intent = new Intent(FirstPageMainActivity.this, MainActivity.class);
+            startActivity(intent);
+                loadAd();
+
+            // [END_EXCLUDE]
+        }
+        // [END show_ad]
     }
 
 

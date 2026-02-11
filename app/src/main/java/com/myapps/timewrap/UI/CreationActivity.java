@@ -9,6 +9,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -18,6 +19,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdSize;
+import com.google.android.gms.ads.AdView;
 import com.myapps.timewrap.R;
 import com.myapps.timewrap.Utils.C1197util;
 import com.myapps.timewrap.Wrapvideo.OnGalleryClickListener;
@@ -39,12 +44,16 @@ public class CreationActivity extends AppCompatActivity implements OnGalleryClic
     List<Video> waterfallVideo = new ArrayList();
     List<Video> wrapImageList = new ArrayList();
 
+    private AdView adView;
+    private FrameLayout adContainerView;
+
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         setContentView((int) R.layout.activity_creation);
 
         PermissionAllow.GetPermission(this);
-
+        adContainerView = findViewById(R.id.ad_view_container);
+        loadBanner();
 
 
         this.rvGallery = (RecyclerView) findViewById(R.id.rvGallery);
@@ -215,6 +224,27 @@ public class CreationActivity extends AppCompatActivity implements OnGalleryClic
             creationActivity.adapter = new CreationAdapter(list, creationActivity2, 0, creationActivity2.getContentResolver(), CreationActivity.this, C1197util.wrapVideo);
             CreationActivity.this.rvGallery.setAdapter(CreationActivity.this.adapter);
         }
+    }
+
+    private void loadBanner() {
+        // [START create_ad_view]
+        // Create a new ad view.
+        adView = new AdView(this);
+        adView.setAdUnitId(getResources().getString(R.string.banner));
+        // [START set_ad_size]
+        // Request an anchored adaptive banner with a width of 360.
+        adView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, 360));
+        // [END set_ad_size]
+
+        // Replace ad container with new ad view.
+        adContainerView.removeAllViews();
+        adContainerView.addView(adView);
+        // [END create_ad_view]
+
+        // [START load_ad]
+        AdRequest adRequest = new AdRequest.Builder().build();
+        adView.loadAd(adRequest);
+        // [END load_ad]
     }
 
 

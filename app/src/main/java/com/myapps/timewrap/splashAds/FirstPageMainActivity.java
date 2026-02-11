@@ -2,8 +2,12 @@ package com.myapps.timewrap.splashAds;
 
 import static android.content.ContentValues.TAG;
 
+import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,7 +20,11 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import com.google.android.ads.nativetemplates.NativeTemplateStyle;
+import com.google.android.ads.nativetemplates.TemplateView;
 import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdListener;
+import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
@@ -42,12 +50,15 @@ public class FirstPageMainActivity extends AppCompatActivity {
     private boolean adIsLoading;
     private long timerMilliseconds;
 
+
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_first_page_main);
 
         adContainerView = findViewById(R.id.ad_view_container);
+
         loadBanner();
         loadAd();
 
@@ -160,7 +171,6 @@ public class FirstPageMainActivity extends AppCompatActivity {
                         Log.d(TAG, "Ad was loaded.");
                         FirstPageMainActivity.this.interstitialAd = interstitialAd;
                         adIsLoading = false;
-                        Toast.makeText(FirstPageMainActivity.this, "onAdLoaded()", Toast.LENGTH_SHORT).show();
                         interstitialAd.setFullScreenContentCallback(
                                 new FullScreenContentCallback() {
                                     @Override
@@ -215,9 +225,7 @@ public class FirstPageMainActivity extends AppCompatActivity {
                                         loadAdError.getDomain(),
                                         loadAdError.getCode(),
                                         loadAdError.getMessage());
-                        Toast.makeText(
-                                        FirstPageMainActivity.this, "onAdFailedToLoad() with error: " + error, Toast.LENGTH_SHORT)
-                                .show();
+
                         Intent intent = new Intent(FirstPageMainActivity.this, MainActivity.class);
                         startActivity(intent);
                     }
@@ -241,6 +249,10 @@ public class FirstPageMainActivity extends AppCompatActivity {
         }
         // [END show_ad]
     }
+
+
+
+
 
 
 

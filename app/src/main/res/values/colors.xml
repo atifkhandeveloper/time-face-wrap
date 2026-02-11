@@ -1,21 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="colorPrimary">#4BD0CA</color>
-    <color name="colorPrimaryDark">#f5e8d7</color>
     <color name="colorAccent">#4BD0CA</color>
 
     <color name="primarymain">#4BD0CA</color>
     <color name="colorlight">#f0f2f4</color>
 
-    <color name="colorlightdark">#f0f2f4</color>
-
-    <color name="adstext">#000000</color>
-
 
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
-    <color name="blackads">#1a1a1a</color>
-    <color name="black1">#4c4c4c</color>
 
 
     <color name="dark_bg">#d29f5e</color>

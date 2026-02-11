@@ -1,5 +1,7 @@
 package com.myapps.timewrap.UI;
 
+import static android.content.ContentValues.TAG;
+
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -10,16 +12,27 @@ import android.os.Environment;
 import android.os.StrictMode;
 import android.util.Log;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.FragmentActivity;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.RequestBuilder;
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdSize;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.interstitial.InterstitialAd;
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.myapps.timewrap.R;
 import com.myapps.timewrap.Utils.C1197util;
 
@@ -37,13 +50,20 @@ public class WrapImageShareActivity extends AppCompatActivity {
     ImageView iv_image;
     ImageView previewViewImageView;
     Bitmap resultBitmap;
+    private AdView adView;
+    private FrameLayout adContainerView;
+    private InterstitialAd interstitialAd;
+    private boolean adIsLoading;
 
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         setContentView((int) R.layout.activity_wrapimage_share);
 
 
+        adContainerView = findViewById(R.id.ad_view_container);
 
+        loadBanner();
+        loadAd();
 
 
         this.previewViewImageView = (ImageView) findViewById(R.id.previewView_ImageView);
@@ -98,17 +118,7 @@ public class WrapImageShareActivity extends AppCompatActivity {
         });
         this.ivSave.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                if (!WrapImageShareActivity.this.isSaved) {
-                    StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
-                    WrapImageShareActivity wrapImageShareActivity = WrapImageShareActivity.this;
-                    wrapImageShareActivity.fileURI = wrapImageShareActivity.saveBitmapInGalary(wrapImageShareActivity.resultBitmap);
-                    Log.e("TAG", "onCreate: " + WrapImageShareActivity.this.fileURI.getPath());
-                    if (WrapImageShareActivity.this.fileURI != null) {
-                        WrapImageShareActivity.this.isSaved = true;
-                        MediaScannerConnection.scanFile(WrapImageShareActivity.this.getApplicationContext(), new String[]{WrapImageShareActivity.this.fileURI.getPath()}, new String[]{"image/jpeg"}, (MediaScannerConnection.OnScanCompletedListener) null);
-                    }
-                    WrapImageShareActivity.this.startActivity(new Intent(WrapImageShareActivity.this, CreationActivity.class).addFlags(67108864));
-                }
+                showInterstitial();
             }
         });
         this.ivBack.setOnClickListener(new View.OnClickListener() {
@@ -152,5 +162,141 @@ public class WrapImageShareActivity extends AppCompatActivity {
             return;
         }
         finish();
+    }
+
+    private void loadBanner() {
+        // [START create_ad_view]
+        // Create a new ad view.
+        adView = new AdView(this);
+        adView.setAdUnitId(getResources().getString(R.string.banner));
+        // [START set_ad_size]
+        // Request an anchored adaptive banner with a width of 360.
+        adView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, 360));
+        // [END set_ad_size]
+
+        // Replace ad container with new ad view.
+        adContainerView.removeAllViews();
+        adContainerView.addView(adView);
+        // [END create_ad_view]
+
+        // [START load_ad]
+        AdRequest adRequest = new AdRequest.Builder().build();
+        adView.loadAd(adRequest);
+        // [END load_ad]
+    }
+
+    public void loadAd() {
+        // Request a new ad if one isn't already loaded.
+        if (adIsLoading || interstitialAd != null) {
+            return;
+        }
+        adIsLoading = true;
+        InterstitialAd.load(
+                this,
+                getResources().getString(R.string.interstial),
+                new AdRequest.Builder().build(),
+                new InterstitialAdLoadCallback() {
+                    @Override
+                    public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
+                        Log.d(TAG, "Ad was loaded.");
+                        WrapImageShareActivity.this.interstitialAd = interstitialAd;
+                        adIsLoading = false;
+                        interstitialAd.setFullScreenContentCallback(
+                                new FullScreenContentCallback() {
+                                    @Override
+                                    public void onAdDismissedFullScreenContent() {
+                                        // Called when fullscreen content is dismissed.
+                                        Log.d(TAG, "The ad was dismissed.");
+                                        // Make sure to set your reference to null so you don't
+                                        // show it a second time.
+                                        WrapImageShareActivity.this.interstitialAd = null;
+                                        if (!WrapImageShareActivity.this.isSaved) {
+                                            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
+                                            WrapImageShareActivity wrapImageShareActivity = WrapImageShareActivity.this;
+                                            wrapImageShareActivity.fileURI = wrapImageShareActivity.saveBitmapInGalary(wrapImageShareActivity.resultBitmap);
+                                            Log.e("TAG", "onCreate: " + WrapImageShareActivity.this.fileURI.getPath());
+                                            if (WrapImageShareActivity.this.fileURI != null) {
+                                                WrapImageShareActivity.this.isSaved = true;
+                                                MediaScannerConnection.scanFile(WrapImageShareActivity.this.getApplicationContext(), new String[]{WrapImageShareActivity.this.fileURI.getPath()}, new String[]{"image/jpeg"}, (MediaScannerConnection.OnScanCompletedListener) null);
+                                            }
+                                            WrapImageShareActivity.this.startActivity(new Intent(WrapImageShareActivity.this, CreationActivity.class).addFlags(67108864));
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onAdFailedToShowFullScreenContent(AdError adError) {
+                                        // Called when fullscreen content failed to show.
+                                        Log.d(TAG, "The ad failed to show.");
+                                        // Make sure to set your reference to null so you don't
+                                        // show it a second time.
+                                        WrapImageShareActivity.this.interstitialAd = null;
+                                    }
+
+                                    @Override
+                                    public void onAdShowedFullScreenContent() {
+                                        // Called when fullscreen content is shown.
+                                        Log.d(TAG, "The ad was shown.");
+                                    }
+
+                                    @Override
+                                    public void onAdImpression() {
+                                        // Called when an impression is recorded for an ad.
+                                        Log.d(TAG, "The ad recorded an impression.");
+                                    }
+
+                                    @Override
+                                    public void onAdClicked() {
+                                        // Called when ad is clicked.
+                                        Log.d(TAG, "The ad was clicked.");
+                                    }
+                                });
+                    }
+
+                    @Override
+                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        Log.d(TAG, loadAdError.getMessage());
+                        interstitialAd = null;
+                        adIsLoading = false;
+
+                        if (!WrapImageShareActivity.this.isSaved) {
+                            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
+                            WrapImageShareActivity wrapImageShareActivity = WrapImageShareActivity.this;
+                            wrapImageShareActivity.fileURI = wrapImageShareActivity.saveBitmapInGalary(wrapImageShareActivity.resultBitmap);
+                            Log.e("TAG", "onCreate: " + WrapImageShareActivity.this.fileURI.getPath());
+                            if (WrapImageShareActivity.this.fileURI != null) {
+                                WrapImageShareActivity.this.isSaved = true;
+                                MediaScannerConnection.scanFile(WrapImageShareActivity.this.getApplicationContext(), new String[]{WrapImageShareActivity.this.fileURI.getPath()}, new String[]{"image/jpeg"}, (MediaScannerConnection.OnScanCompletedListener) null);
+                            }
+                            WrapImageShareActivity.this.startActivity(new Intent(WrapImageShareActivity.this, CreationActivity.class).addFlags(67108864));
+                        }
+                    }
+                });
+    }
+
+
+    private void showInterstitial() {
+        // Show the ad if it's ready. Otherwise restart the game.
+        // [START show_ad]
+        if (interstitialAd != null) {
+            interstitialAd.show(this);
+        } else {
+            Log.d(TAG, "The interstitial ad is still loading.");
+            // [START_EXCLUDE silent]
+            if (!WrapImageShareActivity.this.isSaved) {
+                StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
+                WrapImageShareActivity wrapImageShareActivity = WrapImageShareActivity.this;
+                wrapImageShareActivity.fileURI = wrapImageShareActivity.saveBitmapInGalary(wrapImageShareActivity.resultBitmap);
+                Log.e("TAG", "onCreate: " + WrapImageShareActivity.this.fileURI.getPath());
+                if (WrapImageShareActivity.this.fileURI != null) {
+                    WrapImageShareActivity.this.isSaved = true;
+                    MediaScannerConnection.scanFile(WrapImageShareActivity.this.getApplicationContext(), new String[]{WrapImageShareActivity.this.fileURI.getPath()}, new String[]{"image/jpeg"}, (MediaScannerConnection.OnScanCompletedListener) null);
+                }
+                WrapImageShareActivity.this.startActivity(new Intent(WrapImageShareActivity.this, CreationActivity.class).addFlags(67108864));
+            }
+            loadAd();
+
+            // [END_EXCLUDE]
+        }
+        // [END show_ad]
     }
 }

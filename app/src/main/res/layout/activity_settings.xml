@@ -68,6 +68,14 @@
         </RelativeLayout>
     </LinearLayout>
 
+    <com.google.android.ads.nativetemplates.TemplateView
+        android:id="@+id/my_template"
+        app:gnt_template_type="@layout/gnt_medium_template_view_new"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_alignParentBottom="true"/>
+
     <RelativeLayout
         android:id="@+id/btm1"
         android:layout_width="match_parent"

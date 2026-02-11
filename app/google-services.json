@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1019813136253",
+    "project_id": "time-warp-ac3cf",
+    "storage_bucket": "time-warp-ac3cf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1019813136253:android:ed87e203d3a1557ca32e14",
+        "android_client_info": {
+          "package_name": "com.timewarp.waterfall.image.timescan.facescan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4vNKuCR5cjUYVvyQSfqLJX9gQZjlRBG0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

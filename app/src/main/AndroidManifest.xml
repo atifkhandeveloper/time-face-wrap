@@ -56,14 +56,13 @@
         android:supportsRtl="true"
         android:theme="@style/TimeWarpScanner">
 
-        <!-- Sample AdMob app ID: ca-app-pub-3940256099942544~3347511713 -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="@string/appid"/>
 
         <meta-data
             android:name="com.google.android.gms.ads.AD_MANAGER_APP"
-            android:value="true" />
+            android:value="true"/>
 
 
         <activity
@@ -120,18 +119,13 @@
             android:name="com.myapps.timewrap.UI.MainActivity"
             android:exported="true"
             android:screenOrientation="portrait" />
-
-
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.myapps.timewrap.provider"
+            android:authorities="com.timewarp.waterfall.image.timescan.facescan.provider"
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
-
-
     </application>
-
 </manifest>

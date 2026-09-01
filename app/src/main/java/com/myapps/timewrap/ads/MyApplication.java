@@ -22,6 +22,7 @@ import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.appopen.AppOpenAd;
 import com.google.firebase.FirebaseApp;
 import com.myapps.timewrap.R;
+import com.myapps.timewrap.UI.PremiumManager;
 
 import java.util.Date;
 
@@ -49,6 +50,12 @@ public class MyApplication extends Application
     // ================= SPLASH =================
 
     public void showAdAfterSplash(Activity activity, Runnable onFinish) {
+        // ✅ Check if user is premium - skip ads
+        if (PremiumManager.isPremium(activity)) {
+            Log.d("MyApplication", "Premium user - skipping splash ad");
+            onFinish.run();
+            return;
+        }
         appOpenAdManager.showAdIfAvailable(activity, onFinish);
     }
 
@@ -57,6 +64,11 @@ public class MyApplication extends Application
     @Override
     public void onStart(@NonNull LifecycleOwner owner) {
         if (currentActivity != null && isAppInBackground) {
+            // ✅ Check if user is premium - skip ads
+            if (PremiumManager.isPremium(currentActivity)) {
+                Log.d("MyApplication", "Premium user - skipping foreground ad");
+                return;
+            }
             appOpenAdManager.showAdIfAvailable(currentActivity, () -> {});
         }
         isAppInBackground = false;
@@ -72,7 +84,12 @@ public class MyApplication extends Application
     @Override
     public void onActivityResumed(@NonNull Activity activity) {
         currentActivity = activity;
-        appOpenAdManager.loadAd(activity);
+        // ✅ Only load ad if user is NOT premium
+        if (!PremiumManager.isPremium(activity)) {
+            appOpenAdManager.loadAd(activity);
+        } else {
+            Log.d("MyApplication", "Premium user - not loading ads");
+        }
     }
 
     @Override public void onActivityCreated(@NonNull Activity a, Bundle b) { currentActivity = a; }
@@ -105,7 +122,14 @@ public class MyApplication extends Application
         }
 
         void loadAd(Context ctx) {
+            // ✅ Don't load if already loading or ad is valid
             if (isLoading || isAdValid()) return;
+
+            // ✅ Double-check premium status before loading
+            if (PremiumManager.isPremium(ctx)) {
+                Log.d(TAG, "Premium user - skipping ad load");
+                return;
+            }
 
             isLoading = true;
 
@@ -133,9 +157,20 @@ public class MyApplication extends Application
         }
 
         void showAdIfAvailable(Activity activity, Runnable onFinish) {
+            // ✅ Don't show if already showing
+            if (isShowing) {
+                onFinish.run();
+                return;
+            }
 
-            if (isShowing) return;
+            // ✅ Check premium status before showing
+            if (PremiumManager.isPremium(activity)) {
+                Log.d(TAG, "Premium user - skipping app open ad");
+                onFinish.run();
+                return;
+            }
 
+            // ✅ If ad is not valid, load a new one and skip showing
             if (!isAdValid()) {
                 loadAd(activity);
                 onFinish.run();
@@ -150,7 +185,10 @@ public class MyApplication extends Application
                             appOpenAd = null;
                             isShowing = false;
                             onFinish.run();
-                            loadAd(context);
+                            // ✅ Only reload if not premium
+                            if (!PremiumManager.isPremium(context)) {
+                                loadAd(context);
+                            }
                         }
 
                         @Override
@@ -158,12 +196,16 @@ public class MyApplication extends Application
                             appOpenAd = null;
                             isShowing = false;
                             onFinish.run();
-                            loadAd(context);
+                            // ✅ Only reload if not premium
+                            if (!PremiumManager.isPremium(context)) {
+                                loadAd(context);
+                            }
                         }
 
                         @Override
                         public void onAdShowedFullScreenContent() {
                             isShowing = true;
+                            Log.d(TAG, "App Open Ad showed");
                         }
                     });
 

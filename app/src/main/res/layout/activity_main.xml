@@ -2,134 +2,233 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#F5F7FA">
 
     <LinearLayout
-        android:layout_above="@+id/btm1"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
         <!-- TOP BAR -->
-        <RelativeLayout
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/primarymain">
+            app:cardCornerRadius="0dp"
+            app:cardElevation="4dp"
+            android:backgroundTint="@color/primarymain">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:layout_marginLeft="10dp"
-                android:text="@string/app_name"
-                android:textColor="@color/white"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/primarymain">
 
-            <ImageView
-                android:id="@+id/settings"
-                android:layout_width="@dimen/_30sdp"
-                android:layout_height="@dimen/_30sdp"
-                android:layout_alignParentRight="true"
-                android:src="@drawable/ic_setting"
-                android:layout_centerVertical="true"
-                android:layout_marginRight="@dimen/_10sdp"
-                app:tint="@color/white"/>
-        </RelativeLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_marginLeft="16dp"
+                    android:text="@string/app_name"
+                    android:textColor="@color/white"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-medium" />
 
-        <View
+                <ImageView
+                    android:id="@+id/settings"
+                    android:layout_width="@dimen/_30sdp"
+                    android:layout_height="@dimen/_30sdp"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginRight="16dp"
+                    android:src="@drawable/ic_setting"
+                    app:tint="@color/white"
+                    android:padding="4dp" />
+            </RelativeLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Section Title -->
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#e6e6e6" />
+            android:layout_height="wrap_content"
+            android:text="Explore Tools"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#2C3E50"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="12dp"
+            android:fontFamily="sans-serif-medium" />
 
         <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="match_parent"
+            android:paddingBottom="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp">
 
-                <!-- CARD ROW -->
+                <!-- Grid Layout - 2 columns -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="@dimen/_20sdp"
-                    android:layout_marginRight="@dimen/_20sdp"
-                    android:layout_marginTop="@dimen/_10sdp"
                     android:orientation="horizontal">
 
-                    <!-- CARD 1 -->
+                    <!-- CARD 1 - Time Warp -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:orientation="vertical"
-                        android:padding="4dp">
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
-                        <ImageView
-                            android:id="@+id/iv_wrap_image"
+                        <androidx.cardview.widget.CardView
                             android:layout_width="match_parent"
-                            android:layout_height="120dp"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/time_wrap"/>
+                            android:layout_height="170dp"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="4dp">
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="35dp"
-                            android:gravity="center"
-                            android:text="Time Warp"
-                            android:textStyle="bold"
-                            android:background="#EDEDED"/>
+                            <RelativeLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent">
+
+                                <ImageView
+                                    android:id="@+id/iv_wrap_image"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/time_wrap"/>
+
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/gradient_overlay"/>
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="45dp"
+                                    android:layout_alignParentBottom="true"
+                                    android:gravity="center"
+                                    android:text="Time Warp"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"
+                                    android:background="#80000000"
+                                    android:fontFamily="sans-serif-medium"/>
+                            </RelativeLayout>
+                        </androidx.cardview.widget.CardView>
                     </LinearLayout>
 
-                    <!-- CARD 2 -->
+                    <!-- CARD 2 - Water Fall -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:orientation="vertical"
-                        android:padding="4dp">
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
-                        <ImageView
-                            android:id="@+id/iv_waterfall_video"
+                        <androidx.cardview.widget.CardView
                             android:layout_width="match_parent"
-                            android:layout_height="120dp"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/time_water"/>
+                            android:layout_height="170dp"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="4dp">
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="35dp"
-                            android:gravity="center"
-                            android:text="Water Fall"
-                            android:textStyle="bold"
-                            android:background="#EDEDED"/>
+                            <RelativeLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent">
+
+                                <ImageView
+                                    android:id="@+id/iv_waterfall_video"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/time_water"/>
+
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/gradient_overlay"/>
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="45dp"
+                                    android:layout_alignParentBottom="true"
+                                    android:gravity="center"
+                                    android:text="Water Fall"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"
+                                    android:background="#80000000"
+                                    android:fontFamily="sans-serif-medium"/>
+                            </RelativeLayout>
+                        </androidx.cardview.widget.CardView>
                     </LinearLayout>
 
-                    <!-- CARD 3 -->
+                </LinearLayout>
+
+                <!-- Second Row - My Work (Centered) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
+                        android:layout_weight="0.5"
                         android:orientation="vertical"
-                        android:padding="4dp">
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
-                        <ImageView
-                            android:id="@+id/iv_wrap_video"
+                        <androidx.cardview.widget.CardView
                             android:layout_width="match_parent"
-                            android:layout_height="120dp"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/body"/>
+                            android:layout_height="170dp"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="4dp">
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="35dp"
-                            android:gravity="center"
-                            android:text="My Work"
-                            android:textStyle="bold"
-                            android:background="#EDEDED"/>
+                            <RelativeLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent">
+
+                                <ImageView
+                                    android:id="@+id/iv_wrap_video"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/body"/>
+
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/gradient_overlay"/>
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="45dp"
+                                    android:layout_alignParentBottom="true"
+                                    android:gravity="center"
+                                    android:text="My Work"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"
+                                    android:background="#80000000"
+                                    android:fontFamily="sans-serif-medium"/>
+                            </RelativeLayout>
+                        </androidx.cardview.widget.CardView>
                     </LinearLayout>
 
                 </LinearLayout>
@@ -140,17 +239,10 @@
 
     <com.google.android.ads.nativetemplates.TemplateView
         android:id="@+id/my_template"
-        app:gnt_template_type="@layout/gnt_medium_template_view_new"
+        app:gnt_template_type="@layout/gnt_small_template_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
         android:layout_alignParentBottom="true"/>
 
-    <!-- BOTTOM BAR PLACEHOLDER -->
-    <RelativeLayout
-        android:id="@+id/btm1"
-        android:layout_width="match_parent"
-        android:layout_height="70dp"
-        android:layout_alignParentBottom="true"/>
 
 </RelativeLayout>

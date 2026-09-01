@@ -11,8 +11,8 @@ android {
         applicationId = "com.timewarp.waterfall.image.timescan.facescan"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 5
+        versionName = "1.5"
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -62,6 +62,9 @@ android {
             isUniversalApk = true
         }
     }
+    buildFeatures {
+        viewBinding = true
+    }
 }
 
 dependencies {
@@ -105,6 +108,14 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-ads:24.9.0")
     implementation("com.google.guava:guava:32.1.2-android")
+    implementation("com.android.billingclient:billing:8.0.0")
 
     implementation(project(":nativetemplates"))
+    implementation("androidx.cardview:cardview:1.0.0")
+
+    implementation("com.google.android.play:review:2.0.1")
+    implementation("com.akexorcist:localization:1.2.11")
+    implementation("com.intuit.ssp:ssp-android:1.1.0")
+    implementation("com.intuit.sdp:sdp-android:1.1.0")
+
 }

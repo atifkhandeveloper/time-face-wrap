@@ -15,6 +15,7 @@ import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -26,6 +27,9 @@ import android.widget.VideoView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdRequest;
@@ -63,8 +67,7 @@ public class WaterfallShareActivity extends AppCompatActivity {
     private FrameLayout adContainerView;
     private InterstitialAd interstitialAd;
     private boolean adIsLoading;
-
-
+    private boolean isPremium = false;
 
     public static void moveFile(File file, File file2) throws IOException {
         FileInputStream fileInputStream = new FileInputStream(file);
@@ -93,25 +96,38 @@ public class WaterfallShareActivity extends AppCompatActivity {
 
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-        setContentView((int) R.layout.activity_waterfall_share);
+        enableEdgeToEdge();
+        setContentView(R.layout.activity_waterfall_share);
+        applyWindowInsets();
 
+        // ✅ Check if user is premium
+        isPremium = PremiumManager.isPremium(this);
+        Log.d("WaterfallShare", "User is premium: " + isPremium);
 
         adContainerView = findViewById(R.id.ad_view_container);
 
-        loadBanner();
-        loadAd();
+        // ✅ Only load ads if user is NOT premium
+        if (!isPremium) {
+            Log.d("WaterfallShare", "Free user - loading ads");
+            loadBanner();
+            loadAd();
+        } else {
+            Log.d("WaterfallShare", "Premium user - hiding ads");
+            hideAds();
+        }
 
+        this.videoView = findViewById(R.id.videoView);
+        this.previewViewImageView = findViewById(R.id.previewView_ImageView);
+        this.ivBack = findViewById(R.id.iv_back);
+        this.ivSave = findViewById(R.id.iv_save);
+        this.ivShare = findViewById(R.id.iv_share);
+        this.iv_image = findViewById(R.id.iv_image);
 
-        this.videoView = (VideoView) findViewById(R.id.videoView);
-        this.previewViewImageView = (ImageView) findViewById(R.id.previewView_ImageView);
-        this.ivBack = (ImageView) findViewById(R.id.iv_back);
-        this.ivSave = (ImageView) findViewById(R.id.iv_save);
-        this.ivShare = (ImageView) findViewById(R.id.iv_share);
-        this.iv_image = (ImageView) findViewById(R.id.iv_image);
         Bundle extras = getIntent().getExtras();
         if (!(extras == null || extras.getString("from") == null)) {
             this.isFrom = extras.getString("from");
         }
+
         if (this.isFrom.equalsIgnoreCase(C1197util.MyWork)) {
             MediaController mediaController = new MediaController(this);
             mediaController.setMediaPlayer(this.videoView);
@@ -127,33 +143,70 @@ public class WaterfallShareActivity extends AppCompatActivity {
             this.videoView.setVideoPath(WaterFallActivity.bitmapToVideoEncoder.getOutputFile().getPath());
             this.videoView.start();
         }
-        this.ivBack.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                onBackPressed();
-            }
-        });
-        this.iv_image.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                startActivity(new Intent(WaterfallShareActivity.this, CreationActivity.class).addFlags(67108864));
-                finish();
-            }
-        });
-        this.ivShare.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                WaterfallShareActivity.this.ivSHAREfall(view);
-            }
-        });
-        this.ivSave.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                showInterstitial();
 
+        this.ivBack.setOnClickListener(view -> onBackPressed());
+
+        this.iv_image.setOnClickListener(view -> {
+            startActivity(new Intent(WaterfallShareActivity.this, CreationActivity.class).addFlags(67108864));
+            finish();
+        });
+
+        this.ivShare.setOnClickListener(view -> ivSHAREfall(view));
+
+        this.ivSave.setOnClickListener(view -> {
+            // ✅ Premium users skip ads
+            if (isPremium) {
+                Log.d("WaterfallShare", "Premium user - saving directly without ad");
+                ivSAVEfall(null);
+            } else {
+                showInterstitial();
             }
         });
+
         if (this.isFrom.equalsIgnoreCase(C1197util.MyWork)) {
             this.isSave = true;
-            this.ivSave.setVisibility(8);
-            this.iv_image.setVisibility(8);
+            this.ivSave.setVisibility(View.GONE);
+            this.iv_image.setVisibility(View.GONE);
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // ✅ Refresh premium status
+        boolean currentPremium = PremiumManager.isPremium(this);
+        if (currentPremium != isPremium) {
+            isPremium = currentPremium;
+            Log.d("WaterfallShare", "Premium status changed to: " + isPremium);
+            updateAdVisibility();
+        }
+    }
+
+    private void updateAdVisibility() {
+        if (isPremium) {
+            hideAds();
+        } else {
+            if (adContainerView.getChildCount() == 0) {
+                loadBanner();
+            }
+            if (interstitialAd == null && !adIsLoading) {
+                loadAd();
+            }
+            adContainerView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideAds() {
+        // Hide banner
+        if (adContainerView != null) {
+            adContainerView.removeAllViews();
+            adContainerView.setVisibility(View.GONE);
+        }
+        // Remove interstitial
+        if (interstitialAd != null) {
+            interstitialAd = null;
+        }
+        adIsLoading = false;
     }
 
     public void ivSHAREfall(View view) {
@@ -262,7 +315,6 @@ public class WaterfallShareActivity extends AppCompatActivity {
                     throw th;
                 }
             } catch (Throwable th2) {
-                //th = th2;
                 fileChannel = null;
                 if (fileChannel2 != null) {
                 }
@@ -311,7 +363,7 @@ public class WaterfallShareActivity extends AppCompatActivity {
             C1197util.waterVideo = file3;
             if (copyFileToOther(file.getAbsolutePath(), file3.getAbsolutePath())) {
                 this.isSave = true;
-                Toast.makeText(this, "Save Successfully", 0).show();
+                Toast.makeText(this, "Save Successfully", Toast.LENGTH_SHORT).show();
                 startActivity(new Intent(this, CreationActivity.class).addFlags(67108864));
             }
         } catch (Exception unused) {
@@ -358,36 +410,32 @@ public class WaterfallShareActivity extends AppCompatActivity {
     }
 
     public void onBackPressed() {
-        if (this.isFrom.equalsIgnoreCase(C1197util.MyWork)) {
-            finish();
-            return;
-        }
         finish();
     }
 
     private void loadBanner() {
-        // [START create_ad_view]
-        // Create a new ad view.
+        // ✅ Don't load banner if premium
+        if (isPremium) {
+            return;
+        }
+
         adView = new AdView(this);
         adView.setAdUnitId(getResources().getString(R.string.banner));
-        // [START set_ad_size]
-        // Request an anchored adaptive banner with a width of 360.
         adView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, 360));
-        // [END set_ad_size]
 
-        // Replace ad container with new ad view.
         adContainerView.removeAllViews();
         adContainerView.addView(adView);
-        // [END create_ad_view]
 
-        // [START load_ad]
         AdRequest adRequest = new AdRequest.Builder().build();
         adView.loadAd(adRequest);
-        // [END load_ad]
     }
 
     public void loadAd() {
-        // Request a new ad if one isn't already loaded.
+        // ✅ Don't load interstitial if premium
+        if (isPremium) {
+            return;
+        }
+
         if (adIsLoading || interstitialAd != null) {
             return;
         }
@@ -406,38 +454,29 @@ public class WaterfallShareActivity extends AppCompatActivity {
                                 new FullScreenContentCallback() {
                                     @Override
                                     public void onAdDismissedFullScreenContent() {
-                                        // Called when fullscreen content is dismissed.
                                         Log.d(TAG, "The ad was dismissed.");
-                                        // Make sure to set your reference to null so you don't
-                                        // show it a second time.
                                         WaterfallShareActivity.this.interstitialAd = null;
                                         WaterfallShareActivity.this.ivSAVEfall(null);
                                     }
 
                                     @Override
                                     public void onAdFailedToShowFullScreenContent(AdError adError) {
-                                        // Called when fullscreen content failed to show.
                                         Log.d(TAG, "The ad failed to show.");
-                                        // Make sure to set your reference to null so you don't
-                                        // show it a second time.
                                         WaterfallShareActivity.this.interstitialAd = null;
                                     }
 
                                     @Override
                                     public void onAdShowedFullScreenContent() {
-                                        // Called when fullscreen content is shown.
                                         Log.d(TAG, "The ad was shown.");
                                     }
 
                                     @Override
                                     public void onAdImpression() {
-                                        // Called when an impression is recorded for an ad.
                                         Log.d(TAG, "The ad recorded an impression.");
                                     }
 
                                     @Override
                                     public void onAdClicked() {
-                                        // Called when ad is clicked.
                                         Log.d(TAG, "The ad was clicked.");
                                     }
                                 });
@@ -448,26 +487,56 @@ public class WaterfallShareActivity extends AppCompatActivity {
                         Log.d(TAG, loadAdError.getMessage());
                         interstitialAd = null;
                         adIsLoading = false;
-
                         WaterfallShareActivity.this.ivSAVEfall(null);
                     }
                 });
     }
 
-
     private void showInterstitial() {
-        // Show the ad if it's ready. Otherwise restart the game.
-        // [START show_ad]
+        // ✅ Premium users skip ads
+        if (isPremium) {
+            Log.d("WaterfallShare", "Premium user - skipping interstitial");
+            ivSAVEfall(null);
+            return;
+        }
+
         if (interstitialAd != null) {
             interstitialAd.show(this);
         } else {
             Log.d(TAG, "The interstitial ad is still loading.");
-            // [START_EXCLUDE silent]
             WaterfallShareActivity.this.ivSAVEfall(null);
             loadAd();
-
-            // [END_EXCLUDE]
         }
-        // [END show_ad]
+    }
+
+    private void enableEdgeToEdge() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightStatusBars(false);
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightNavigationBars(false);
+            }
+        } else {
+            getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            );
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        }
+    }
+
+    private void applyWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
+            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            int navigationBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
+            return insets;
+        });
     }
 }

@@ -23,12 +23,14 @@ import android.graphics.YuvImage;
 import android.graphics.drawable.Drawable;
 import android.media.Image;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Size;
 import android.view.Display;
 import android.view.TextureView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -47,6 +49,9 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.PointerIconCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.LifecycleOwner;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.myapps.timewrap.R;
@@ -120,9 +125,10 @@ public class WrapImageActivity extends AppCompatActivity implements CameraXConfi
 
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
+        enableEdgeToEdge();
         getWindow().setFlags(1024, 1024);
         setContentView((int) R.layout.activity_wrap_image);
-
+        applyWindowInsets();
 
         PermissionAllow.GetPermission(this);
 
@@ -667,4 +673,50 @@ public class WrapImageActivity extends AppCompatActivity implements CameraXConfi
             imageProxy.close();
         }
     }
+
+    private void enableEdgeToEdge() {
+        // For Android 10+ (API 29+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+
+            // Optional: Make status bar and navigation bar transparent
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+
+            // Set light/dark status bar icons based on your theme
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightStatusBars(false); // false for light status bar, true for dark
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightNavigationBars(false);
+            }
+        } else {
+            // For older Android versions
+            getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            );
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        }
+    }
+
+    /**
+     * Apply window insets to handle system bars
+     */
+    private void applyWindowInsets() {
+        // For the root view of your layout
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
+            // Get insets for system bars
+            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            int navigationBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+
+            // Apply padding to your root layout to avoid overlapping with system bars
+            // If you want your content to go under system bars, remove this
+            view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
+
+            return insets;
+        });
+    }
+
 }

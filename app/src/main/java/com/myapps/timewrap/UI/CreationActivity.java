@@ -4,11 +4,13 @@ import android.content.ContentUris;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -17,6 +19,8 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -46,68 +50,101 @@ public class CreationActivity extends AppCompatActivity implements OnGalleryClic
 
     private AdView adView;
     private FrameLayout adContainerView;
+    private boolean isPremium = false;
 
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-        setContentView((int) R.layout.activity_creation);
-
+        enableEdgeToEdge();
+        setContentView(R.layout.activity_creation);
+        applyWindowInsets();
         PermissionAllow.GetPermission(this);
+
+        // ✅ Check if user is premium
+        isPremium = PremiumManager.isPremium(this);
+        Log.d("CreationActivity", "User is premium: " + isPremium);
+
         adContainerView = findViewById(R.id.ad_view_container);
-        loadBanner();
 
+        // ✅ Only load banner if user is NOT premium
+        if (!isPremium) {
+            Log.d("CreationActivity", "Free user - loading banner");
+            loadBanner();
+        } else {
+            Log.d("CreationActivity", "Premium user - hiding banner");
+            hideBanner();
+        }
 
-        this.rvGallery = (RecyclerView) findViewById(R.id.rvGallery);
-        this.txtWaterfallVideo = (TextView) findViewById(R.id.txt_waterfall_video);
-        this.txtWrapImage = (TextView) findViewById(R.id.txt_wrap_image);
-        this.txtNoRecording = (TextView) findViewById(R.id.txtNoRecording);
-        ImageView imageView = (ImageView) findViewById(R.id.iv_back);
+        this.rvGallery = findViewById(R.id.rvGallery);
+        this.txtWaterfallVideo = findViewById(R.id.txt_waterfall_video);
+        this.txtWrapImage = findViewById(R.id.txt_wrap_image);
+        this.txtNoRecording = findViewById(R.id.txtNoRecording);
+        ImageView imageView = findViewById(R.id.iv_back);
         this.ivBack = imageView;
-        imageView.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                CreationActivity.this.onBackPressed();
-            }
+        imageView.setOnClickListener(view -> onBackPressed());
+
+        this.txtWrapImage.setOnClickListener(view -> {
+            txtWrapImage.setBackgroundResource(R.drawable.dark_view_bg);
+            txtWrapImage.setTextColor(-1);
+            txtWaterfallVideo.setBackgroundResource(0);
+            txtWaterfallVideo.setTextColor(ViewCompat.MEASURED_STATE_MASK);
+            getWrapImage();
         });
-        this.txtWrapImage.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                CreationActivity.this.txtWrapImage.setBackgroundResource(R.drawable.dark_view_bg);
-                CreationActivity.this.txtWrapImage.setTextColor(-1);
-                CreationActivity.this.txtWaterfallVideo.setBackgroundResource(0);
-                CreationActivity.this.txtWaterfallVideo.setTextColor(ViewCompat.MEASURED_STATE_MASK);
-                CreationActivity.this.getWrapImage();
+
+        this.txtWaterfallVideo.setOnClickListener(view -> {
+            txtWaterfallVideo.setBackgroundResource(R.drawable.dark_view_bg);
+            txtWaterfallVideo.setTextColor(-1);
+            txtWrapImage.setBackgroundResource(0);
+            txtWrapImage.setTextColor(ViewCompat.MEASURED_STATE_MASK);
+            List<Video> waterfallVideos = getWaterfallVideos();
+            waterfallVideo = waterfallVideos;
+            if (waterfallVideos == null || waterfallVideos.size() <= 0) {
+                txtNoRecording.setVisibility(View.VISIBLE);
+                rvGallery.setVisibility(View.GONE);
+                return;
             }
+            rvGallery.setVisibility(View.VISIBLE);
+            txtNoRecording.setVisibility(View.GONE);
+            CreationAdapter creationAdapter = new CreationAdapter(waterfallVideo, this, 0, getContentResolver(), this, C1197util.waterfallVideo);
+            adapter = creationAdapter;
+            rvGallery.setAdapter(creationAdapter);
         });
-        this.txtWaterfallVideo.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                CreationActivity.this.txtWaterfallVideo.setBackgroundResource(R.drawable.dark_view_bg);
-                CreationActivity.this.txtWaterfallVideo.setTextColor(-1);
-                CreationActivity.this.txtWrapImage.setBackgroundResource(0);
-                CreationActivity.this.txtWrapImage.setTextColor(ViewCompat.MEASURED_STATE_MASK);
-                List<Video> waterfallVideos = CreationActivity.this.getWaterfallVideos();
-                CreationActivity.this.waterfallVideo = waterfallVideos;
-                if (waterfallVideos == null || waterfallVideos.size() <= 0) {
-                    CreationActivity.this.txtNoRecording.setVisibility(0);
-                    CreationActivity.this.rvGallery.setVisibility(8);
-                    return;
-                }
-                CreationActivity.this.rvGallery.setVisibility(0);
-                CreationActivity.this.txtNoRecording.setVisibility(8);
-                List<Video> list = CreationActivity.this.waterfallVideo;
-                CreationActivity creationActivity = CreationActivity.this;
-                CreationAdapter creationAdapter = new CreationAdapter(list, creationActivity, 0, creationActivity.getContentResolver(), CreationActivity.this, C1197util.waterfallVideo);
-                CreationActivity.this.adapter = creationAdapter;
-                CreationActivity.this.rvGallery.setAdapter(creationAdapter);
-            }
-        });
+
         this.rvGallery.setLayoutManager(new GridLayoutManager(this, 2));
         getWrapImage();
     }
 
-    public void onClick(Video video, String str) {
-        /*if (str.equalsIgnoreCase(C1197util.wrapVideo)) {
-            if (video != null) {
-                playVid(video, str);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // ✅ Refresh premium status
+        boolean currentPremium = PremiumManager.isPremium(this);
+        if (currentPremium != isPremium) {
+            isPremium = currentPremium;
+            Log.d("CreationActivity", "Premium status changed to: " + isPremium);
+            updateAdVisibility();
+        }
+    }
+
+    private void updateAdVisibility() {
+        if (isPremium) {
+            hideBanner();
+        } else {
+            if (adContainerView.getChildCount() == 0) {
+                loadBanner();
             }
-        } else*/ if (str.equalsIgnoreCase(C1197util.waterfallVideo)) {
+            adContainerView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideBanner() {
+        if (adContainerView != null) {
+            adContainerView.removeAllViews();
+            adContainerView.setVisibility(View.GONE);
+        }
+    }
+
+    public void onClick(Video video, String str) {
+        if (str.equalsIgnoreCase(C1197util.waterfallVideo)) {
             C1197util.waterVideo = new File(video.getRealPath());
             Intent intent = new Intent(this, WaterfallShareActivity.class);
             intent.putExtra("from", C1197util.MyWork);
@@ -133,27 +170,27 @@ public class CreationActivity extends AppCompatActivity implements OnGalleryClic
             this.wrapImageList = new ArrayList();
             Log.d("Files", "Path: /storage/emulated/0/DCIM/" + getResources().getString(R.string.app_name) + File.separator + "WarpImage");
             File[] listFiles = new File("/storage/emulated/0/DCIM/" + getResources().getString(R.string.app_name) + File.separator + "WarpImage").listFiles();
-            StringBuilder sb = new StringBuilder();
-            sb.append("Size: ");
-            sb.append(listFiles.length);
-            Log.d("Files", sb.toString());
-            for (int i = 0; i < listFiles.length; i++) {
-                Log.d("Files", "FileName:" + listFiles[i].getName());
-                this.wrapImageList.add(new Video(listFiles[i].getName(), listFiles[i].getPath(), listFiles[i].getAbsolutePath()));
-            }
-            List<Video> list = this.wrapImageList;
-            if (list != null) {
-                if (list.size() > 0) {
-                    this.rvGallery.setVisibility(0);
-                    this.txtNoRecording.setVisibility(8);
+            if (listFiles != null) {
+                StringBuilder sb = new StringBuilder();
+                sb.append("Size: ");
+                sb.append(listFiles.length);
+                Log.d("Files", sb.toString());
+                for (int i = 0; i < listFiles.length; i++) {
+                    Log.d("Files", "FileName:" + listFiles[i].getName());
+                    this.wrapImageList.add(new Video(listFiles[i].getName(), listFiles[i].getPath(), listFiles[i].getAbsolutePath()));
+                }
+                List<Video> list = this.wrapImageList;
+                if (list != null && list.size() > 0) {
+                    this.rvGallery.setVisibility(View.VISIBLE);
+                    this.txtNoRecording.setVisibility(View.GONE);
                     CreationAdapter creationAdapter = new CreationAdapter(this.wrapImageList, this, 0, getContentResolver(), this, C1197util.wrapImage);
                     this.adapter = creationAdapter;
                     this.rvGallery.setAdapter(creationAdapter);
                     return;
                 }
             }
-            this.txtNoRecording.setVisibility(0);
-            this.rvGallery.setVisibility(8);
+            this.txtNoRecording.setVisibility(View.VISIBLE);
+            this.rvGallery.setVisibility(View.GONE);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -212,12 +249,12 @@ public class CreationActivity extends AppCompatActivity implements OnGalleryClic
             CreationActivity.this.videoList.clear();
             CreationActivity.this.videoList.addAll(this.vids);
             if (CreationActivity.this.videoList.size() == 0) {
-                CreationActivity.this.txtNoRecording.setVisibility(0);
-                CreationActivity.this.rvGallery.setVisibility(8);
+                CreationActivity.this.txtNoRecording.setVisibility(View.VISIBLE);
+                CreationActivity.this.rvGallery.setVisibility(View.GONE);
                 return;
             }
-            CreationActivity.this.rvGallery.setVisibility(0);
-            CreationActivity.this.txtNoRecording.setVisibility(8);
+            CreationActivity.this.rvGallery.setVisibility(View.VISIBLE);
+            CreationActivity.this.txtNoRecording.setVisibility(View.GONE);
             CreationActivity creationActivity = CreationActivity.this;
             List<Video> list = creationActivity.videoList;
             CreationActivity creationActivity2 = CreationActivity.this;
@@ -227,25 +264,50 @@ public class CreationActivity extends AppCompatActivity implements OnGalleryClic
     }
 
     private void loadBanner() {
-        // [START create_ad_view]
-        // Create a new ad view.
+        // ✅ Don't load banner if premium
+        if (isPremium) {
+            return;
+        }
+
         adView = new AdView(this);
         adView.setAdUnitId(getResources().getString(R.string.banner));
-        // [START set_ad_size]
-        // Request an anchored adaptive banner with a width of 360.
         adView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, 360));
-        // [END set_ad_size]
 
-        // Replace ad container with new ad view.
         adContainerView.removeAllViews();
         adContainerView.addView(adView);
-        // [END create_ad_view]
 
-        // [START load_ad]
         AdRequest adRequest = new AdRequest.Builder().build();
         adView.loadAd(adRequest);
-        // [END load_ad]
     }
 
+    private void enableEdgeToEdge() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightStatusBars(false);
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightNavigationBars(false);
+            }
+        } else {
+            getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            );
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        }
+    }
+
+    private void applyWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
+            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            int navigationBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
+            return insets;
+        });
+    }
 }

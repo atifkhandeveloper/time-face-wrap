@@ -44,6 +44,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
+
             <androidx.core.widget.NestedScrollView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -55,13 +56,13 @@
                     android:gravity="center"
                     android:orientation="vertical">
 
+
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="5dp"
                         android:orientation="vertical">
-
-
 
                     </LinearLayout>
 
@@ -73,6 +74,14 @@
                         android:src="@drawable/iithankyou"
                         android:layout_width="120dp"
                         android:layout_height="120dp"/>
+
+                    <com.google.android.ads.nativetemplates.TemplateView
+                        android:id="@+id/my_template"
+                        app:gnt_template_type="@layout/gnt_medium_template_view_new"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/_10sdp"
+                        android:layout_alignParentBottom="true"/>
 
                 </LinearLayout>
 

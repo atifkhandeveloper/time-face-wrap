@@ -86,6 +86,10 @@
             android:name="com.myapps.timewrap.splashAds.PrivacyTermsActivity"
             android:screenOrientation="portrait" />
 
+        <activity
+            android:name="com.myapps.timewrap.UI.PremiumActivity"
+            android:screenOrientation="portrait" />
+
 
         <meta-data
             android:name="com.google.android.gms.ads.AD_MANAGER_APP"

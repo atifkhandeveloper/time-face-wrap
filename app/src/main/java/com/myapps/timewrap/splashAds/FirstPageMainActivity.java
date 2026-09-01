@@ -4,10 +4,7 @@ import static android.content.ContentValues.TAG;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
-import android.content.Context;
 import android.content.Intent;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -18,13 +15,8 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
-import com.google.android.ads.nativetemplates.NativeTemplateStyle;
-import com.google.android.ads.nativetemplates.TemplateView;
 import com.google.android.gms.ads.AdError;
-import com.google.android.gms.ads.AdListener;
-import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
@@ -35,33 +27,54 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.myapps.timewrap.R;
 import com.myapps.timewrap.UI.MainActivity;
 import com.myapps.timewrap.UI.PermissionAllow;
-import com.myapps.timewrap.ads.MyApplication;
-
+import com.myapps.timewrap.UI.PremiumActivity;
+import com.myapps.timewrap.UI.PremiumManager;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 public class FirstPageMainActivity extends AppCompatActivity {
-
 
     private AdView adView;
     private FrameLayout adContainerView;
     private InterstitialAd interstitialAd;
     private boolean adIsLoading;
-    private long timerMilliseconds;
-
+    private boolean isPremium = false;
 
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        enableEdgeToEdge();
         setContentView(R.layout.activity_first_page_main);
+        applyWindowInsets();
+
+        // ✅ Check if user is premium
+        isPremium = PremiumManager.isPremium(this);
+        Log.d("FirstPageMain", "User is premium: " + isPremium);
+
+        // ✅ If premium, go directly to MainActivity
+        if (isPremium) {
+            Log.d("FirstPageMain", "Premium user - going directly to MainActivity");
+            startActivity(new Intent(FirstPageMainActivity.this, MainActivity.class));
+            finish();
+            return;
+        }
 
         adContainerView = findViewById(R.id.ad_view_container);
 
-        loadBanner();
-        loadAd();
-
+        // ✅ Only load ads for free users
+        if (!isPremium) {
+            Log.d("FirstPageMain", "Free user - loading ads");
+            loadBanner();
+            loadAd();
+        } else {
+            Log.d("FirstPageMain", "Premium user - hiding ads");
+            hideAds();
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = getWindow();
@@ -69,21 +82,66 @@ public class FirstPageMainActivity extends AppCompatActivity {
             window.setStatusBarColor(getResources().getColor(R.color.primarymain));
         }
 
-        //one time call & load ads
-
-
         PermissionAllow.GetPermission(this);
 
-
-        ((LinearLayout) findViewById(R.id.btnstart)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        ((LinearLayout) findViewById(R.id.btnstart)).setOnClickListener(view -> {
+            // ✅ If premium, go directly to MainActivity
+            if (isPremium) {
+                Log.d("FirstPageMain", "Premium user - going directly to MainActivity");
+                startActivity(new Intent(FirstPageMainActivity.this, MainActivity.class));
+                finish();
+            } else {
                 showInterstitial();
-
             }
         });
+    }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // ✅ Refresh premium status when returning to activity
+        boolean currentPremium = PremiumManager.isPremium(this);
+        if (currentPremium != isPremium) {
+            isPremium = currentPremium;
+            Log.d("FirstPageMain", "Premium status changed to: " + isPremium);
 
+            // ✅ If user became premium, go to MainActivity
+            if (isPremium) {
+                Log.d("FirstPageMain", "User became premium - redirecting to MainActivity");
+                startActivity(new Intent(FirstPageMainActivity.this, MainActivity.class));
+                finish();
+                return;
+            }
+            updateAdVisibility();
+        }
+    }
+
+    private void updateAdVisibility() {
+        if (isPremium) {
+            hideAds();
+        } else {
+            // Only load if not already loaded
+            if (adContainerView.getChildCount() == 0) {
+                loadBanner();
+            }
+            if (interstitialAd == null && !adIsLoading) {
+                loadAd();
+            }
+            adContainerView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideAds() {
+        // Hide banner
+        if (adContainerView != null) {
+            adContainerView.removeAllViews();
+            adContainerView.setVisibility(View.GONE);
+        }
+        // Remove interstitial
+        if (interstitialAd != null) {
+            interstitialAd = null;
+        }
+        adIsLoading = false;
     }
 
     @Override
@@ -92,72 +150,51 @@ public class FirstPageMainActivity extends AppCompatActivity {
     }
 
     private void ExitDialog() {
-
         final Dialog dialog = new Dialog(FirstPageMainActivity.this, R.style.DialogTheme);
         dialog.setContentView(R.layout.popup_exit_dialog);
         dialog.setCancelable(false);
 
-        RelativeLayout no = (RelativeLayout) dialog.findViewById(R.id.no);
-        RelativeLayout rate = (RelativeLayout) dialog.findViewById(R.id.rate);
-        RelativeLayout yes = (RelativeLayout) dialog.findViewById(R.id.yes);
+        RelativeLayout no = dialog.findViewById(R.id.no);
+        RelativeLayout rate = dialog.findViewById(R.id.rate);
+        RelativeLayout yes = dialog.findViewById(R.id.yes);
 
-        //Reguler Native Ads
+        no.setOnClickListener(v -> dialog.dismiss());
 
-
-        no.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dialog.dismiss();
-            }
+        rate.setOnClickListener(v -> {
+            final String rateapp = getPackageName();
+            Intent intent1 = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + rateapp));
+            startActivity(intent1);
         });
 
-        rate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final String rateapp = getPackageName();
-                Intent intent1 = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + rateapp));
-                startActivity(intent1);
-            }
-        });
-
-        yes.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dialog.dismiss();
-                Intent intent = new Intent(getApplicationContext(), AppThankYouActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-            }
+        yes.setOnClickListener(v -> {
+            dialog.dismiss();
+            Intent intent = new Intent(getApplicationContext(), AppThankYouActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
         });
 
         dialog.show();
-
     }
 
     private void loadBanner() {
-        // [START create_ad_view]
-        // Create a new ad view.
+        // ✅ Don't load banner if premium
+        if (isPremium) {
+            return;
+        }
+
         adView = new AdView(this);
         adView.setAdUnitId(getResources().getString(R.string.banner));
-        // [START set_ad_size]
-        // Request an anchored adaptive banner with a width of 360.
         adView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, 360));
-        // [END set_ad_size]
 
-        // Replace ad container with new ad view.
         adContainerView.removeAllViews();
         adContainerView.addView(adView);
-        // [END create_ad_view]
 
-        // [START load_ad]
         AdRequest adRequest = new AdRequest.Builder().build();
         adView.loadAd(adRequest);
-        // [END load_ad]
     }
 
     public void loadAd() {
-        // Request a new ad if one isn't already loaded.
-        if (adIsLoading || interstitialAd != null) {
+        if (adIsLoading || interstitialAd != null || isPremium) {
             return;
         }
         adIsLoading = true;
@@ -167,47 +204,58 @@ public class FirstPageMainActivity extends AppCompatActivity {
                 new AdRequest.Builder().build(),
                 new InterstitialAdLoadCallback() {
                     @Override
-                    public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
+                    public void onAdLoaded(@NonNull InterstitialAd ad) {
                         Log.d(TAG, "Ad was loaded.");
-                        FirstPageMainActivity.this.interstitialAd = interstitialAd;
+                        interstitialAd = ad;
                         adIsLoading = false;
+
                         interstitialAd.setFullScreenContentCallback(
                                 new FullScreenContentCallback() {
                                     @Override
                                     public void onAdDismissedFullScreenContent() {
-                                        // Called when fullscreen content is dismissed.
                                         Log.d(TAG, "The ad was dismissed.");
-                                        // Make sure to set your reference to null so you don't
-                                        // show it a second time.
-                                        FirstPageMainActivity.this.interstitialAd = null;
-                                        Intent intent = new Intent(FirstPageMainActivity.this, MainActivity.class);
-                                        startActivity(intent);
+                                        interstitialAd = null;
+
+                                        // ✅ Check premium status before navigating
+                                        if (PremiumManager.isPremium(FirstPageMainActivity.this)) {
+                                            isPremium = true;
+                                            updateAdVisibility();
+                                            // ✅ Premium user goes to MainActivity
+                                            startActivity(new Intent(FirstPageMainActivity.this, MainActivity.class));
+                                            finish();
+                                        } else {
+                                            // Free user goes to PremiumActivity
+                                            Intent intent = new Intent(FirstPageMainActivity.this, PremiumActivity.class);
+                                            startActivity(intent);
+                                        }
                                     }
 
                                     @Override
                                     public void onAdFailedToShowFullScreenContent(AdError adError) {
-                                        // Called when fullscreen content failed to show.
                                         Log.d(TAG, "The ad failed to show.");
-                                        // Make sure to set your reference to null so you don't
-                                        // show it a second time.
-                                        FirstPageMainActivity.this.interstitialAd = null;
+                                        interstitialAd = null;
+
+                                        // ✅ On ad failure, check premium status
+                                        if (PremiumManager.isPremium(FirstPageMainActivity.this)) {
+                                            startActivity(new Intent(FirstPageMainActivity.this, MainActivity.class));
+                                            finish();
+                                        } else {
+                                            startActivity(new Intent(FirstPageMainActivity.this, PremiumActivity.class));
+                                        }
                                     }
 
                                     @Override
                                     public void onAdShowedFullScreenContent() {
-                                        // Called when fullscreen content is shown.
                                         Log.d(TAG, "The ad was shown.");
                                     }
 
                                     @Override
                                     public void onAdImpression() {
-                                        // Called when an impression is recorded for an ad.
                                         Log.d(TAG, "The ad recorded an impression.");
                                     }
 
                                     @Override
                                     public void onAdClicked() {
-                                        // Called when ad is clicked.
                                         Log.d(TAG, "The ad was clicked.");
                                     }
                                 });
@@ -218,42 +266,62 @@ public class FirstPageMainActivity extends AppCompatActivity {
                         Log.d(TAG, loadAdError.getMessage());
                         interstitialAd = null;
                         adIsLoading = false;
-                        String error =
-                                String.format(
-                                        java.util.Locale.US,
-                                        "domain: %s, code: %d, message: %s",
-                                        loadAdError.getDomain(),
-                                        loadAdError.getCode(),
-                                        loadAdError.getMessage());
 
-                        Intent intent = new Intent(FirstPageMainActivity.this, MainActivity.class);
-                        startActivity(intent);
+                        // ✅ On ad load failure, check premium status
+                        if (PremiumManager.isPremium(FirstPageMainActivity.this)) {
+                            startActivity(new Intent(FirstPageMainActivity.this, MainActivity.class));
+                            finish();
+                        } else {
+                            startActivity(new Intent(FirstPageMainActivity.this, MainActivity.class));
+                        }
                     }
                 });
     }
 
-
     private void showInterstitial() {
-        // Show the ad if it's ready. Otherwise restart the game.
-        // [START show_ad]
         if (interstitialAd != null) {
             interstitialAd.show(this);
         } else {
             Log.d(TAG, "The interstitial ad is still loading.");
-            // [START_EXCLUDE silent]
-            Intent intent = new Intent(FirstPageMainActivity.this, MainActivity.class);
-            startActivity(intent);
-                loadAd();
-
-            // [END_EXCLUDE]
+            // ✅ Check premium status before navigating
+            if (PremiumManager.isPremium(this)) {
+                startActivity(new Intent(FirstPageMainActivity.this, MainActivity.class));
+                finish();
+            } else {
+                startActivity(new Intent(FirstPageMainActivity.this, PremiumActivity.class));
+            }
+            loadAd();
         }
-        // [END show_ad]
     }
 
+    private void enableEdgeToEdge() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightStatusBars(false);
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightNavigationBars(false);
+            }
+        } else {
+            getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            );
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        }
+    }
 
-
-
-
-
+    private void applyWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
+            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            int navigationBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
+            return insets;
+        });
+    }
 }

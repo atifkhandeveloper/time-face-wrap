@@ -1,6 +1,6 @@
 [versions]
 agp = "8.12.2"
-kotlin = "2.0.21"
+kotlin = "2.2.0"
 coreKtx = "1.17.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -13,6 +13,7 @@ agcp = "1.9.1.300"
 agconnect-core = "1.9.1.302"
 firebaseCrashlyticsBuildtools = "3.0.6"
 firebaseCommon = "22.0.1"
+firebasePerfKtx = "22.0.6"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -26,6 +27,7 @@ androidx-constraintlayout = { group = "androidx.constraintlayout", name = "const
 agconnect-core = { group = "com.huawei.agconnect", name = "agconnect-core", version.ref = "agconnect-core" }
 firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
 firebase-common = { group = "com.google.firebase", name = "firebase-common", version.ref = "firebaseCommon" }
+firebase-perf-ktx = { group = "com.google.firebase", name = "firebase-perf-ktx", version.ref = "firebasePerfKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

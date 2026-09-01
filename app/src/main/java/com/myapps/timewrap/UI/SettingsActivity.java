@@ -5,16 +5,21 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.ads.nativetemplates.NativeTemplateStyle;
 import com.google.android.ads.nativetemplates.TemplateView;
@@ -34,49 +39,77 @@ public class SettingsActivity extends AppCompatActivity {
     RelativeLayout rlShare;
     TextView txtVersion;
     TemplateView template;
-
+    private boolean isPremium = false;
 
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-        setContentView((int) R.layout.activity_settings);
+        enableEdgeToEdge();
+        setContentView(R.layout.activity_settings);
+        applyWindowInsets();
+
+        // ✅ Check if user is premium
+        isPremium = PremiumManager.isPremium(this);
+        Log.d("SettingsActivity", "User is premium: " + isPremium);
 
         template = findViewById(R.id.my_template);
-        template.setVisibility(View.GONE);
-        loadNative();
 
+        // ✅ Only load native ad if user is NOT premium
+        if (!isPremium) {
+            Log.d("SettingsActivity", "Free user - loading native ad");
+            template.setVisibility(View.GONE);
+            loadNative();
+        } else {
+            Log.d("SettingsActivity", "Premium user - hiding native ad");
+            template.setVisibility(View.GONE);
+        }
 
+        this.ivBack = findViewById(R.id.iv_back);
+        this.txtVersion = findViewById(R.id.txt_version);
+        this.rlShare = findViewById(R.id.rl_share);
+        this.rlRateApp = findViewById(R.id.rl_rateUs);
+        this.rlPrivacy = findViewById(R.id.rl_privacy);
 
-
-        this.ivBack = (ImageView) findViewById(R.id.iv_back);
-        this.txtVersion = (TextView) findViewById(R.id.txt_version);
-        this.rlShare = (RelativeLayout) findViewById(R.id.rl_share);
-        this.rlRateApp = (RelativeLayout) findViewById(R.id.rl_rateUs);
-        this.rlPrivacy = (RelativeLayout) findViewById(R.id.rl_privacy);
-        this.rlShare.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                Intent intent = new Intent("android.intent.action.SEND");
-                intent.setType("text/plain");
-                intent.putExtra("android.intent.extra.SUBJECT", SettingsActivity.this.getResources().getString(R.string.app_name));
-                intent.putExtra("android.intent.extra.TEXT", "https://play.google.com/store/apps/details?id=" + SettingsActivity.this.getPackageName() + System.getProperty("line.separator"));
-                SettingsActivity.this.startActivity(Intent.createChooser(intent, "Share via"));
-            }
+        this.rlShare.setOnClickListener(view -> {
+            Intent intent = new Intent("android.intent.action.SEND");
+            intent.setType("text/plain");
+            intent.putExtra("android.intent.extra.SUBJECT", getResources().getString(R.string.app_name));
+            intent.putExtra("android.intent.extra.TEXT", "https://play.google.com/store/apps/details?id=" + getPackageName() + System.getProperty("line.separator"));
+            startActivity(Intent.createChooser(intent, "Share via"));
         });
-        this.rlRateApp.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                PlayStoreGo.onClickRateUs(SettingsActivity.this);
-            }
-        });
-        this.rlPrivacy.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                PlayStoreGo.onClickPrivacy(SettingsActivity.this);
-            }
-        });
+
+        this.rlRateApp.setOnClickListener(view -> PlayStoreGo.onClickRateUs(SettingsActivity.this));
+
+        this.rlPrivacy.setOnClickListener(view -> PlayStoreGo.onClickPrivacy(SettingsActivity.this));
+
         this.txtVersion.setText("1.0");
-        this.ivBack.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                SettingsActivity.this.onBackPressed();
+
+        this.ivBack.setOnClickListener(view -> onBackPressed());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // ✅ Refresh premium status when returning to activity
+        boolean currentPremium = PremiumManager.isPremium(this);
+        if (currentPremium != isPremium) {
+            isPremium = currentPremium;
+            Log.d("SettingsActivity", "Premium status changed to: " + isPremium);
+            updateAdVisibility();
+        }
+    }
+
+    private void updateAdVisibility() {
+        if (isPremium) {
+            // Hide ad
+            template.setVisibility(View.GONE);
+            Log.d("SettingsActivity", "Premium user - ads hidden");
+        } else {
+            // Show ad - only load if not already loaded
+            if (template.getVisibility() == View.GONE) {
+                loadNative();
             }
-        });
+            Log.d("SettingsActivity", "Free user - ads shown");
+        }
     }
 
     @Override
@@ -86,6 +119,12 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     public void loadNative() {
+        // ✅ Don't load ad if premium
+        if (isPremium) {
+            template.setVisibility(View.GONE);
+            return;
+        }
+
         // Check internet before loading ad
         if (!isInternetAvailable()) {
             Log.d("Ads", "No internet available. Skipping native ad.");
@@ -158,5 +197,48 @@ public class SettingsActivity extends AppCompatActivity {
         return false;
     }
 
+    private void enableEdgeToEdge() {
+        // For Android 10+ (API 29+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
+            // Optional: Make status bar and navigation bar transparent
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+
+            // Set light/dark status bar icons based on your theme
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightStatusBars(false); // false for light status bar, true for dark
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightNavigationBars(false);
+            }
+        } else {
+            // For older Android versions
+            getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            );
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        }
+    }
+
+    /**
+     * Apply window insets to handle system bars
+     */
+    private void applyWindowInsets() {
+        // For the root view of your layout
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
+            // Get insets for system bars
+            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            int navigationBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+
+            // Apply padding to your root layout to avoid overlapping with system bars
+            // If you want your content to go under system bars, remove this
+            view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
+
+            return insets;
+        });
+    }
 }

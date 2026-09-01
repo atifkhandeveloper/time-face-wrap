@@ -6,10 +6,12 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.MediaController;
@@ -20,6 +22,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import androidx.core.content.FileProvider;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdRequest;
@@ -32,6 +37,7 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.myapps.timewrap.R;
 import com.myapps.timewrap.UI.CreationActivity;
 import com.myapps.timewrap.UI.MainActivity;
+import com.myapps.timewrap.UI.PremiumManager;
 import com.myapps.timewrap.UI.WaterfallShareActivity;
 import com.myapps.timewrap.Utils.C1197util;
 import java.io.File;
@@ -54,63 +60,114 @@ public class WrapVideoShareActivity extends AppCompatActivity {
     private FrameLayout adContainerView;
     private InterstitialAd interstitialAd;
     private boolean adIsLoading;
+    private boolean isPremium = false;
 
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-        setContentView((int) R.layout.activity_wrap_video_view);
+        enableEdgeToEdge();
+        setContentView(R.layout.activity_wrap_video_view);
+        applyWindowInsets();
 
+        // ✅ Check if user is premium
+        isPremium = PremiumManager.isPremium(this);
+        Log.d("WrapVideoShare", "User is premium: " + isPremium);
 
         adContainerView = findViewById(R.id.ad_view_container);
-        loadBanner();
-        loadAd();
 
+        // ✅ Only load ads if user is NOT premium
+        if (!isPremium) {
+            Log.d("WrapVideoShare", "Free user - loading ads");
+            loadBanner();
+            loadAd();
+        } else {
+            Log.d("WrapVideoShare", "Premium user - hiding ads");
+            hideAds();
+        }
 
-        this.videoView = (VideoView) findViewById(R.id.vidView);
-        this.previewViewImageView = (ImageView) findViewById(R.id.previewView_ImageView);
-        this.ivBack = (ImageView) findViewById(R.id.iv_back);
-        this.ivSave = (ImageView) findViewById(R.id.iv_save);
-        this.ivShare = (ImageView) findViewById(R.id.iv_share);
-        this.iv_image = (ImageView) findViewById(R.id.iv_image);
+        this.videoView = findViewById(R.id.vidView);
+        this.previewViewImageView = findViewById(R.id.previewView_ImageView);
+        this.ivBack = findViewById(R.id.iv_back);
+        this.ivSave = findViewById(R.id.iv_save);
+        this.ivShare = findViewById(R.id.iv_share);
+        this.iv_image = findViewById(R.id.iv_image);
+
         Bundle extras = getIntent().getExtras();
         if (!(extras == null || extras.getString("from") == null)) {
             this.isFrom = extras.getString("from");
             Log.d("nmnmnmnm", "-----" + this.isFrom);
         }
+
         MediaController mediaController = new MediaController(this);
         mediaController.setMediaPlayer(this.videoView);
         mediaController.setAnchorView(this.videoView);
         this.videoView.setMediaController(mediaController);
         this.videoView.setVideoPath(C1197util.wrapVideoFile.getAbsolutePath());
         this.videoView.start();
-        this.ivBack.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                onBackPressed();
-            }
-        });
-        this.iv_image.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                startActivity(new Intent(WrapVideoShareActivity.this, CreationActivity.class).addFlags(67108864));
-                finish();
-            }
-        });
-        this.ivShare.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                WrapVideoShareActivity.this.ivSHAREit(view);
-            }
-        });
-        this.ivSave.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                showInterstitial();
 
+        this.ivBack.setOnClickListener(view -> onBackPressed());
+
+        this.iv_image.setOnClickListener(view -> {
+            startActivity(new Intent(WrapVideoShareActivity.this, CreationActivity.class).addFlags(67108864));
+            finish();
+        });
+
+        this.ivShare.setOnClickListener(view -> ivSHAREit(view));
+
+        this.ivSave.setOnClickListener(view -> {
+            // ✅ Premium users skip ads
+            if (isPremium) {
+                Log.d("WrapVideoShare", "Premium user - saving directly without ad");
+                ivSAVEit(null);
+            } else {
+                showInterstitial();
             }
         });
+
         if (this.isFrom.equalsIgnoreCase(C1197util.MyWork)) {
             this.isSave = true;
-            this.ivSave.setVisibility(8);
-            this.iv_image.setVisibility(8);
+            this.ivSave.setVisibility(View.GONE);
+            this.iv_image.setVisibility(View.GONE);
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // ✅ Refresh premium status
+        boolean currentPremium = PremiumManager.isPremium(this);
+        if (currentPremium != isPremium) {
+            isPremium = currentPremium;
+            Log.d("WrapVideoShare", "Premium status changed to: " + isPremium);
+            updateAdVisibility();
+        }
+    }
+
+    private void updateAdVisibility() {
+        if (isPremium) {
+            hideAds();
+        } else {
+            if (adContainerView.getChildCount() == 0) {
+                loadBanner();
+            }
+            if (interstitialAd == null && !adIsLoading) {
+                loadAd();
+            }
+            adContainerView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideAds() {
+        // Hide banner
+        if (adContainerView != null) {
+            adContainerView.removeAllViews();
+            adContainerView.setVisibility(View.GONE);
+        }
+        // Remove interstitial
+        if (interstitialAd != null) {
+            interstitialAd = null;
+        }
+        adIsLoading = false;
+    }
 
     public void ivSHAREit(View view) {
         Uri uri;
@@ -182,7 +239,7 @@ public class WrapVideoShareActivity extends AppCompatActivity {
             Log.d("jijijj", "addVideoToGallery-----" + C1197util.wrapVideoFile);
             if (copyFileToOther(file.getAbsolutePath(), file3.getAbsolutePath())) {
                 this.isSave = true;
-                Toast.makeText(this, "Save Successfully", 0).show();
+                Toast.makeText(this, "Save Successfully", Toast.LENGTH_SHORT).show();
                 startActivity(new Intent(this, CreationActivity.class).addFlags(67108864));
             }
         } catch (Exception e) {
@@ -233,7 +290,6 @@ public class WrapVideoShareActivity extends AppCompatActivity {
                     throw th;
                 }
             } catch (Throwable th2) {
-                //th = th2;
                 fileChannel = null;
                 if (fileChannel2 != null) {
                 }
@@ -247,41 +303,33 @@ public class WrapVideoShareActivity extends AppCompatActivity {
         }
     }
 
-    public void onResume() {
-        super.onResume();
-    }
-
     public void onBackPressed() {
-        if (this.isFrom.equalsIgnoreCase(C1197util.MyWork)) {
-            finish();
-            return;
-        }
         finish();
     }
 
     private void loadBanner() {
-        // [START create_ad_view]
-        // Create a new ad view.
+        // ✅ Don't load banner if premium
+        if (isPremium) {
+            return;
+        }
+
         adView = new AdView(this);
         adView.setAdUnitId(getResources().getString(R.string.banner));
-        // [START set_ad_size]
-        // Request an anchored adaptive banner with a width of 360.
         adView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, 360));
-        // [END set_ad_size]
 
-        // Replace ad container with new ad view.
         adContainerView.removeAllViews();
         adContainerView.addView(adView);
-        // [END create_ad_view]
 
-        // [START load_ad]
         AdRequest adRequest = new AdRequest.Builder().build();
         adView.loadAd(adRequest);
-        // [END load_ad]
     }
 
     public void loadAd() {
-        // Request a new ad if one isn't already loaded.
+        // ✅ Don't load interstitial if premium
+        if (isPremium) {
+            return;
+        }
+
         if (adIsLoading || interstitialAd != null) {
             return;
         }
@@ -300,39 +348,29 @@ public class WrapVideoShareActivity extends AppCompatActivity {
                                 new FullScreenContentCallback() {
                                     @Override
                                     public void onAdDismissedFullScreenContent() {
-                                        // Called when fullscreen content is dismissed.
                                         Log.d(TAG, "The ad was dismissed.");
-                                        // Make sure to set your reference to null so you don't
-                                        // show it a second time.
                                         WrapVideoShareActivity.this.interstitialAd = null;
                                         WrapVideoShareActivity.this.ivSAVEit(null);
-
                                     }
 
                                     @Override
                                     public void onAdFailedToShowFullScreenContent(AdError adError) {
-                                        // Called when fullscreen content failed to show.
                                         Log.d(TAG, "The ad failed to show.");
-                                        // Make sure to set your reference to null so you don't
-                                        // show it a second time.
                                         WrapVideoShareActivity.this.ivSAVEit(null);
                                     }
 
                                     @Override
                                     public void onAdShowedFullScreenContent() {
-                                        // Called when fullscreen content is shown.
                                         Log.d(TAG, "The ad was shown.");
                                     }
 
                                     @Override
                                     public void onAdImpression() {
-                                        // Called when an impression is recorded for an ad.
                                         Log.d(TAG, "The ad recorded an impression.");
                                     }
 
                                     @Override
                                     public void onAdClicked() {
-                                        // Called when ad is clicked.
                                         Log.d(TAG, "The ad was clicked.");
                                     }
                                 });
@@ -343,26 +381,56 @@ public class WrapVideoShareActivity extends AppCompatActivity {
                         Log.d(TAG, loadAdError.getMessage());
                         interstitialAd = null;
                         adIsLoading = false;
-
                         WrapVideoShareActivity.this.ivSAVEit(null);
                     }
                 });
     }
 
-
     private void showInterstitial() {
-        // Show the ad if it's ready. Otherwise restart the game.
-        // [START show_ad]
+        // ✅ Premium users skip ads
+        if (isPremium) {
+            Log.d("WrapVideoShare", "Premium user - skipping interstitial");
+            ivSAVEit(null);
+            return;
+        }
+
         if (interstitialAd != null) {
             interstitialAd.show(this);
         } else {
             Log.d(TAG, "The interstitial ad is still loading.");
-            // [START_EXCLUDE silent]
             WrapVideoShareActivity.this.ivSAVEit(null);
             loadAd();
-
-            // [END_EXCLUDE]
         }
-        // [END show_ad]
+    }
+
+    private void enableEdgeToEdge() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightStatusBars(false);
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightNavigationBars(false);
+            }
+        } else {
+            getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            );
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        }
+    }
+
+    private void applyWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
+            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            int navigationBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
+            return insets;
+        });
     }
 }

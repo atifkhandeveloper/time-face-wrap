@@ -9,18 +9,18 @@
     <string name="tutorial">Swipe down or right to start a scan!</string>
 
 
-    <string name="banner">ca-app-pub-3940256099942544/9214589741</string>
-    <string name="appid">ca-app-pub-3940256099942544~3347511713</string>
-    <string name="interstial">ca-app-pub-3940256099942544/1033173712</string>
-    <string name="appopen">ca-app-pub-3940256099942544/9257395921</string>
-    <string name="native_ad">ca-app-pub-3940256099942544/2247696110</string>
+<!--    <string name="banner">ca-app-pub-3940256099942544/9214589741</string>-->
+<!--    <string name="appid">ca-app-pub-3940256099942544~3347511713</string>-->
+<!--    <string name="interstial">ca-app-pub-3940256099942544/1033173712</string>-->
+<!--    <string name="appopen">ca-app-pub-3940256099942544/9257395921</string>-->
+<!--    <string name="native_ad">ca-app-pub-3940256099942544/2247696110</string>-->
 
 <!--    real ids-->
-<!--    <string name="banner">ca-app-pub-5969006643846426/8691549512</string>-->
-<!--    <string name="appid">ca-app-pub-5969006643846426~2600774141</string>-->
-<!--    <string name="interstial">ca-app-pub-5969006643846426/8974610806</string>-->
-<!--    <string name="appopen">ca-app-pub-5969006643846426/1336530027</string>-->
-<!--    <string name="native_ad">ca-app-pub-5969006643846426/2496842105</string>-->
+    <string name="banner">ca-app-pub-5969006643846426/8691549512</string>
+    <string name="appid">ca-app-pub-5969006643846426~2600774141</string>
+    <string name="interstial">ca-app-pub-5969006643846426/8974610806</string>
+    <string name="appopen">ca-app-pub-5969006643846426/1336530027</string>
+    <string name="native_ad">ca-app-pub-5969006643846426/2496842105</string>
 
 
 

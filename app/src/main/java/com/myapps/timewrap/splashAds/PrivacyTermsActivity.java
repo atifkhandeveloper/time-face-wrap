@@ -3,6 +3,10 @@ package com.myapps.timewrap.splashAds;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
@@ -12,12 +16,14 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
 import com.myapps.timewrap.R;
-import com.myapps.timewrap.ads.MyApplication;
+import com.myapps.timewrap.UI.PremiumManager;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 public class PrivacyTermsActivity extends AppCompatActivity {
 
@@ -28,31 +34,37 @@ public class PrivacyTermsActivity extends AppCompatActivity {
     private FrameLayout adContainerView;
 
     @Override
-    protected void onCreate(android.os.Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        enableEdgeToEdge();
         setContentView(R.layout.activity_privacy_terms);
+        applyWindowInsets();
         activity = PrivacyTermsActivity.this;
 
         adContainerView = findViewById(R.id.ad_view_container);
-        loadBanner();
+
+        // ✅ Check if user is premium BEFORE loading banner
+        if (PremiumManager.isPremium(this)) {
+            // Premium user - hide ads
+            Log.d("PrivacyTerms", "Premium user - hiding ads");
+            hideAds();
+        } else {
+            // Free user - show ads
+            Log.d("PrivacyTerms", "Free user - showing ads");
+            loadBanner();
+        }
 
         first_check = findViewById(R.id.first_check);
         second_check = findViewById(R.id.second_check);
         accept_button = findViewById(R.id.accept_button);
-        accept_button.setOnClickListener(new android.view.View.OnClickListener() {
-            @RequiresApi(api = Build.VERSION_CODES.O)
-            @Override
-            public void onClick(android.view.View v) {
-                if (!first_check.isChecked() || !second_check.isChecked()) {
-                    Toast.makeText(getApplicationContext(), "Check above options to continue", Toast.LENGTH_SHORT).show();
-                    return;
-                } else {
-                    //startActivity(new Intent(activity, PermissionPageActivity.class));
-                    startActivity(new Intent(activity, FirstPageMainActivity.class));
-                }
+        accept_button.setOnClickListener(v -> {
+            if (!first_check.isChecked() || !second_check.isChecked()) {
+                Toast.makeText(getApplicationContext(), "Check above options to continue", Toast.LENGTH_SHORT).show();
+                return;
+            } else {
+                startActivity(new Intent(activity, FirstPageMainActivity.class));
             }
         });
-
     }
 
     @Override
@@ -63,31 +75,66 @@ public class PrivacyTermsActivity extends AppCompatActivity {
         }
     }
 
-
     @Override
     public void onBackPressed() {
         super.onBackPressed();
         finish();
     }
 
+    // ---------------- ADS ----------------
+
     private void loadBanner() {
-        // [START create_ad_view]
-        // Create a new ad view.
+        // Create a new ad view
         adView = new AdView(this);
         adView.setAdUnitId(getResources().getString(R.string.banner));
-        // [START set_ad_size]
-        // Request an anchored adaptive banner with a width of 360.
         adView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, 360));
-        // [END set_ad_size]
 
-        // Replace ad container with new ad view.
+        // Replace ad container with new ad view
         adContainerView.removeAllViews();
         adContainerView.addView(adView);
-        // [END create_ad_view]
 
-        // [START load_ad]
+        // Load ad
         AdRequest adRequest = new AdRequest.Builder().build();
         adView.loadAd(adRequest);
-        // [END load_ad]
+    }
+
+    private void hideAds() {
+        if (adContainerView != null) {
+            adContainerView.removeAllViews();
+            adContainerView.setVisibility(View.GONE);
+        }
+    }
+
+    // ---------------- UI HELPERS ----------------
+
+    private void enableEdgeToEdge() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightStatusBars(false);
+                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
+                        .setAppearanceLightNavigationBars(false);
+            }
+        } else {
+            getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            );
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        }
+    }
+
+    private void applyWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
+            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            int navigationBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
+            return insets;
+        });
     }
 }

@@ -4,75 +4,119 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg" >
-
-
+    android:background="@drawable/bg">
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <!-- App Logo/Icon -->
+        <ImageView
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_above="@+id/title_text"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="20dp"
+            android:src="@drawable/icon"
+            android:background="@drawable/circle_white_bg"
+            android:padding="20dp"/>
 
+        <!-- Title -->
         <TextView
+            android:id="@+id/title_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Welcome To\n Time Warp Scan"
+            android:layout_above="@+id/subtitle_text"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="10dp"
+            android:text="Time Warp Scan"
             android:textColor="@color/white"
-            android:textSize="@dimen/_40sdp"
+            android:textSize="36dp"
             android:textStyle="bold"
-            android:textAlignment="center"
+            android:fontFamily="sans-serif-medium"
+            android:textAlignment="center" />
+
+        <!-- Subtitle -->
+        <TextView
+            android:id="@+id/subtitle_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_above="@+id/start"
             android:layout_centerHorizontal="true"
-            android:layout_marginBottom="@dimen/_50sdp"/>
+            android:layout_marginBottom="@dimen/_60sdp"
+            android:text="Create Amazing Effects"
+            android:textColor="#E0E0E0"
+            android:textSize="18dp"
+            android:textAlignment="center"
+            android:fontFamily="sans-serif" />
 
+        <!-- Main Button Section -->
+        <LinearLayout
+            android:id="@+id/start"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="80dp">
 
-                        <LinearLayout
-                            android:id="@+id/start"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:layout_alignParentBottom="true"
-                            android:layout_marginBottom="70dp">
+            <!-- Dive In Button -->
+            <LinearLayout
+                android:id="@+id/btnstart"
+                android:layout_width="220dp"
+                android:layout_height="60dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/button_gradient"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:elevation="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
 
-                            <LinearLayout
-                                android:id="@+id/btnstart"
-                                android:layout_width="200dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginLeft="20dp"
-                                android:layout_marginTop="5dp"
-                                android:layout_marginRight="20dp"
-                                android:background="@drawable/ad_btn_install"
-                                android:orientation="horizontal"
-                                android:layout_gravity="center_horizontal"
-                                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:fontFamily="@font/regular"
+                    android:gravity="center_horizontal"
+                    android:includeFontPadding="false"
+                    android:text="Dive In"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    />
 
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="12dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="@color/white"/>
+            </LinearLayout>
 
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center"
-                                    android:layout_weight="1"
-                                    android:fontFamily="@font/regular"
-                                    android:gravity="center_horizontal"
-                                    android:includeFontPadding="false"
-                                    android:text="Dive In"
-                                    android:textColor="@color/white"
-                                    android:textSize="20dp" />
+            <!-- Spacer -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
 
+            <!-- Privacy Policy Link -->
+            <TextView
+                android:id="@+id/tv_privacy"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="Privacy Policy"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                android:clickable="true"
+                android:visibility="gone"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:padding="8dp" />
 
-                        </LinearLayout>
+        </LinearLayout>
 
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="5dp" />
-
-                    </LinearLayout>
-
-
-
-
-
+        <!-- Bottom Ad Container -->
         <RelativeLayout
             android:id="@+id/btm1"
             android:layout_width="match_parent"
@@ -87,11 +131,29 @@
                 android:layout_centerInParent="true"
                 android:layout_alignParentBottom="true" />
 
-
         </RelativeLayout>
 
+        <!-- Decorative Elements -->
+        <View
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="true"
+            android:background="@drawable/circle_blur"
+            android:layout_marginTop="-80dp"
+            android:layout_marginRight="-80dp"
+            android:alpha="0.3"/>
+
+        <View
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentLeft="true"
+            android:background="@drawable/circle_blur"
+            android:layout_marginBottom="200dp"
+            android:layout_marginLeft="-60dp"
+            android:alpha="0.2"/>
+
     </RelativeLayout>
-
-
 
 </RelativeLayout>

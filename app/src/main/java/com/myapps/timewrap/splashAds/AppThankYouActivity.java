@@ -20,9 +20,12 @@ import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.nativead.NativeAd;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.myapps.timewrap.R;
 import com.myapps.timewrap.UI.PremiumManager;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -32,6 +35,14 @@ public class AppThankYouActivity extends AppCompatActivity {
 
     TemplateView template;
     private boolean isPremium = false;
+    private boolean adsEnabled = true;
+    private RemoteConfigManager remoteConfigManager;
+
+    // ✅ Track current native ad
+    private NativeAd currentNativeAd = null;
+
+    // ✅ Firebase Analytics
+    private FirebaseAnalytics mFirebaseAnalytics;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,19 +51,31 @@ public class AppThankYouActivity extends AppCompatActivity {
         setContentView(R.layout.activity_thankyou_app);
         applyWindowInsets();
 
-        // ✅ Check if user is premium
-        isPremium = PremiumManager.isPremium(this);
+        // ✅ Initialize Firebase Analytics
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+        Log.d("AppThankYou", "Firebase Analytics initialized");
+
+        // ✅ Initialize Remote Config
+        remoteConfigManager = RemoteConfigManager.getInstance();
+        remoteConfigManager.logAllConfigsDebug();
+
+        // ✅ Check if user is premium (from Remote Config and local)
+        isPremium = PremiumManager.isPremium(this) && remoteConfigManager.isPremiumEnabled();
         Log.d("AppThankYou", "User is premium: " + isPremium);
+
+        // ✅ Check if ads are enabled from Remote Config
+        adsEnabled = remoteConfigManager.isAdsEnabled();
+        Log.d("AppThankYou", "Ads enabled: " + adsEnabled);
 
         template = findViewById(R.id.my_template);
 
-        // ✅ Only load native ad if user is NOT premium
-        if (!isPremium) {
+        // ✅ Only load native ad if NOT premium AND ads are enabled in remote config
+        if (!isPremium && adsEnabled && remoteConfigManager.isNativeEnabled()) {
             Log.d("AppThankYou", "Free user - loading native ad");
             template.setVisibility(View.GONE);
             loadNative();
         } else {
-            Log.d("AppThankYou", "Premium user - hiding native ad");
+            Log.d("AppThankYou", "Premium user or ads disabled - hiding native ad");
             template.setVisibility(View.GONE);
         }
 
@@ -77,25 +100,56 @@ public class AppThankYouActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // ✅ Refresh premium status when returning to activity
-        boolean currentPremium = PremiumManager.isPremium(this);
-        if (currentPremium != isPremium) {
+
+        // ✅ Refresh remote config and premium status
+        remoteConfigManager.refresh();
+
+        // ✅ Update premium and ads status
+        boolean currentPremium = PremiumManager.isPremium(this) && remoteConfigManager.isPremiumEnabled();
+        boolean currentAdsEnabled = remoteConfigManager.isAdsEnabled();
+
+        // Check if status changed
+        boolean statusChanged = (currentPremium != isPremium) || (currentAdsEnabled != adsEnabled);
+
+        if (statusChanged) {
             isPremium = currentPremium;
-            Log.d("AppThankYou", "Premium status changed to: " + isPremium);
+            adsEnabled = currentAdsEnabled;
+            Log.d("AppThankYou", "Status changed - Premium: " + isPremium + ", Ads Enabled: " + adsEnabled);
             updateAdVisibility();
         }
     }
 
-    private void updateAdVisibility() {
-        if (isPremium) {
+    @Override
+    protected void onDestroy() {
+        // ✅ SAFE cleanup — DO NOT call template.setNativeAd(null) (crashes the library)
+        if (template != null) {
             template.setVisibility(View.GONE);
-            Log.d("AppThankYou", "Premium user - ads hidden");
+        }
+
+        // ✅ Destroy the NativeAd object itself
+        if (currentNativeAd != null) {
+            currentNativeAd.destroy();
+            currentNativeAd = null;
+        }
+
+        super.onDestroy();
+    }
+
+    private void updateAdVisibility() {
+        if (isPremium || !adsEnabled || !remoteConfigManager.isNativeEnabled()) {
+            template.setVisibility(View.GONE);
+            // ✅ Destroy native ad
+            if (currentNativeAd != null) {
+                currentNativeAd.destroy();
+                currentNativeAd = null;
+            }
+            Log.d("AppThankYou", "Ads hidden - Premium: " + isPremium + ", Ads Enabled: " + adsEnabled);
         } else {
-            // Only load if not already loaded
-            if (template.getVisibility() == View.GONE) {
+            // Only load if not already loaded and showing
+            if (template.getVisibility() == View.GONE && currentNativeAd == null) {
                 loadNative();
             }
-            Log.d("AppThankYou", "Free user - ads shown");
+            Log.d("AppThankYou", "Free user - showing ads");
         }
     }
 
@@ -130,7 +184,10 @@ public class AppThankYouActivity extends AppCompatActivity {
         });
     }
 
+    // ================= NATIVE AD =====================
+
     private void loadNative() {
+        // ✅ Check all conditions before loading
         if (!isInternetAvailable()) {
             Log.d("AppThankYou", "No internet - skipping native ad");
             template.setVisibility(View.GONE);
@@ -138,27 +195,73 @@ public class AppThankYouActivity extends AppCompatActivity {
         }
 
         // ✅ Double-check premium status before loading
-        if (PremiumManager.isPremium(this)) {
+        if (PremiumManager.isPremium(this) && remoteConfigManager.isPremiumEnabled()) {
             Log.d("AppThankYou", "Premium user - skipping native ad load");
+            template.setVisibility(View.GONE);
+            return;
+        }
+
+        // ✅ Check if ads are enabled
+        if (!adsEnabled || !remoteConfigManager.isNativeEnabled()) {
+            Log.d("AppThankYou", "Ads disabled - skipping native ad load");
             template.setVisibility(View.GONE);
             return;
         }
 
         Log.d("AppThankYou", "Loading native ad...");
 
-        AdLoader adLoader = new AdLoader.Builder(this, getString(R.string.native_ad))
+        // ✅ Get native ad ID from Remote Config
+        final String nativeAdId = remoteConfigManager.getNativeAdId();
+        Log.d("AppThankYou", "Native Ad ID from Remote Config: " + nativeAdId);
+
+        if (nativeAdId == null || nativeAdId.isEmpty()) {
+            Log.e("AppThankYou", "Native Ad ID is null or empty");
+            template.setVisibility(View.GONE);
+            return;
+        }
+
+        AdLoader adLoader = new AdLoader.Builder(this, nativeAdId)
                 .forNativeAd(nativeAd -> {
+                    // ✅ Destroy previous ad before storing new one
+                    if (currentNativeAd != null) {
+                        currentNativeAd.destroy();
+                    }
+
+                    currentNativeAd = nativeAd;
+
                     NativeTemplateStyle style = new NativeTemplateStyle.Builder().build();
                     template.setStyles(style);
                     template.setNativeAd(nativeAd);
                     template.setVisibility(View.VISIBLE);
-                    Log.d("AppThankYou", "✅ Native ad loaded");
+                    Log.d("AppThankYou", "✅ Native ad loaded successfully");
+
+                    // ✅ Log ad_impression event
+                    logAdImpression("native", nativeAdId);
+
+                    // ✅ Listen for paid events (real revenue data)
+                    nativeAd.setOnPaidEventListener(adValue -> {
+                        double revenue = adValue.getValueMicros() / 1_000_000.0;
+                        String currency = adValue.getCurrencyCode();
+                        Log.d("AppThankYou", "💰 Native paid event - Revenue: " + revenue + " " + currency);
+                        sendRevenueToFirebase(revenue, currency, "native", nativeAdId);
+                    });
                 })
                 .withAdListener(new AdListener() {
                     @Override
-                    public void onAdFailedToLoad(LoadAdError adError) {
+                    public void onAdFailedToLoad(@NonNull LoadAdError adError) {
                         template.setVisibility(View.GONE);
-                        Log.e("AppThankYou", "❌ Native ad failed: " + adError.getMessage());
+                        Log.e("AppThankYou", "❌ Native ad failed to load: " + adError.getMessage());
+                    }
+
+                    @Override
+                    public void onAdLoaded() {
+                        Log.d("AppThankYou", "Native ad loaded (AdListener)");
+                    }
+
+                    @Override
+                    public void onAdClicked() {
+                        Log.d("AppThankYou", "Native ad clicked");
+                        logAdClick("native", nativeAdId);
                     }
                 })
                 .build();
@@ -173,5 +276,62 @@ public class AppThankYouActivity extends AppCompatActivity {
             return net != null && net.isConnected();
         }
         return false;
+    }
+
+    // ================= FIREBASE ANALYTICS METHODS =====================
+
+    /**
+     * Log ad impression event to Firebase Analytics
+     */
+    private void logAdImpression(String adFormat, String adUnitId) {
+        try {
+            Bundle bundle = new Bundle();
+            bundle.putString(FirebaseAnalytics.Param.AD_PLATFORM, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_SOURCE, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_FORMAT, adFormat);
+            bundle.putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId);
+            mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.AD_IMPRESSION, bundle);
+            Log.d("AppThankYou", "📊 Logged ad_impression event - Format: " + adFormat);
+        } catch (Exception e) {
+            Log.e("AppThankYou", "Error logging ad_impression: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Log ad click event to Firebase Analytics
+     */
+    private void logAdClick(String adFormat, String adUnitId) {
+        try {
+            Bundle bundle = new Bundle();
+            bundle.putString(FirebaseAnalytics.Param.AD_PLATFORM, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_SOURCE, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_FORMAT, adFormat);
+            bundle.putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId);
+//            mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.AD_CLICK, bundle);
+            Log.d("AppThankYou", "📊 Logged ad_click event - Format: " + adFormat);
+        } catch (Exception e) {
+            Log.e("AppThankYou", "Error logging ad_click: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Send ad revenue to Firebase Analytics
+     */
+    private void sendRevenueToFirebase(double value, String currency, String adFormat, String adUnitId) {
+        try {
+            if (value > 0) {
+                Bundle bundle = new Bundle();
+                bundle.putDouble(FirebaseAnalytics.Param.VALUE, value);
+                bundle.putString(FirebaseAnalytics.Param.CURRENCY, currency);
+                bundle.putString(FirebaseAnalytics.Param.AD_PLATFORM, "admob");
+                bundle.putString(FirebaseAnalytics.Param.AD_SOURCE, "admob");
+                bundle.putString(FirebaseAnalytics.Param.AD_FORMAT, adFormat);
+                bundle.putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId);
+                mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.AD_IMPRESSION, bundle);
+                Log.d("AppThankYou", "💰 Revenue sent to Firebase: " + value + " " + currency + " (" + adFormat + ")");
+            }
+        } catch (Exception e) {
+            Log.e("AppThankYou", "Error sending revenue to Firebase: " + e.getMessage());
+        }
     }
 }

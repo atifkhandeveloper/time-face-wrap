@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 android {
@@ -11,8 +13,8 @@ android {
         applicationId = "com.timewarp.waterfall.image.timescan.facescan"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.5"
+        versionCode = 11
+        versionName = "1.11"
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -75,6 +77,8 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.firebase.common)
+    implementation(libs.firebase.config)
+    implementation(libs.firebase.crashlytics)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -117,5 +121,16 @@ dependencies {
     implementation("com.akexorcist:localization:1.2.11")
     implementation("com.intuit.ssp:ssp-android:1.1.0")
     implementation("com.intuit.sdp:sdp-android:1.1.0")
+
+    implementation("com.facebook.android:audience-network-sdk:6.21.0")
+    implementation("com.google.ads.mediation:facebook:6.11.0.0")
+//Applovin ads
+    implementation("com.applovin:applovin-sdk:+")
+    implementation("com.applovin.mediation:facebook-adapter:6.8.0.15")
+    implementation(platform("com.google.firebase:firebase-bom:34.9.0"))
+
+    // Add the dependency for the Analytics library
+    implementation("com.google.firebase:firebase-analytics")
+
 
 }

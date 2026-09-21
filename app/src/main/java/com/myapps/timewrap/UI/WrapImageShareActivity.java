@@ -1,7 +1,5 @@
 package com.myapps.timewrap.UI;
 
-import static android.content.ContentValues.TAG;
-
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -16,8 +14,6 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -27,10 +23,11 @@ import androidx.core.content.FileProvider;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.fragment.app.FragmentActivity;
+import androidx.core.view.WindowInsetsControllerCompat;
+
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.RequestBuilder;
 import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
@@ -38,14 +35,19 @@ import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.myapps.timewrap.R;
 import com.myapps.timewrap.Utils.C1197util;
+import com.myapps.timewrap.splashAds.RemoteConfigManager;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.Random;
 
 public class WrapImageShareActivity extends AppCompatActivity {
+
+    private static final String LOG_TAG = "WrapImageShare";
+
     Uri fileURI = null;
     String isFrom = "";
     boolean isSaved = false;
@@ -60,40 +62,41 @@ public class WrapImageShareActivity extends AppCompatActivity {
     private InterstitialAd interstitialAd;
     private boolean adIsLoading;
     private boolean isPremium = false;
+    private boolean adsEnabled = true;
+    private RemoteConfigManager remoteConfigManager;
+
+    // ✅ Firebase Analytics
+    private FirebaseAnalytics mFirebaseAnalytics;
 
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
+
+        // 🔴 GUARANTEED-VISIBLE LOG
+        Log.e("CHECK", "=== WrapImageShareActivity onCreate STARTED ===");
+
         enableEdgeToEdge();
         setContentView(R.layout.activity_wrapimage_share);
         applyWindowInsets();
 
-        // ✅ Check if user is premium
-        isPremium = PremiumManager.isPremium(this);
-        Log.d("WrapImageShare", "User is premium: " + isPremium);
+        // ✅ Firebase Analytics
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+        Log.e(LOG_TAG, "Firebase Analytics initialized");
 
+        // ✅ Bind views first (no config dependency)
         adContainerView = findViewById(R.id.ad_view_container);
-
-        // ✅ Only load ads if user is NOT premium
-        if (!isPremium) {
-            Log.d("WrapImageShare", "Free user - loading ads");
-            loadBanner();
-            loadAd();
-        } else {
-            Log.d("WrapImageShare", "Premium user - hiding ads");
-            hideAds();
-        }
-
         this.previewViewImageView = findViewById(R.id.previewView_ImageView);
         this.ivBack = findViewById(R.id.iv_back);
         this.ivSave = findViewById(R.id.iv_save);
         this.ivShare = findViewById(R.id.iv_share);
         this.iv_image = findViewById(R.id.iv_image);
 
+        // ✅ Read intent extras
         Bundle extras = getIntent().getExtras();
         if (!(extras == null || extras.getString("from") == null)) {
             this.isFrom = extras.getString("from");
         }
 
+        // ✅ Load image (no config dependency)
         if (this.isFrom.equalsIgnoreCase(C1197util.MyWork)) {
             Glide.with(this)
                     .load(C1197util.wrapImagePath)
@@ -106,8 +109,10 @@ public class WrapImageShareActivity extends AppCompatActivity {
             this.previewViewImageView.setImageBitmap(bitmap);
         }
 
+        // ✅ Setup click listeners (no config dependency)
         this.iv_image.setOnClickListener(view -> {
-            startActivity(new Intent(WrapImageShareActivity.this, CreationActivity.class).addFlags(67108864));
+            startActivity(new Intent(WrapImageShareActivity.this, CreationActivity.class)
+                    .addFlags(67108864));
             finish();
         });
 
@@ -119,13 +124,17 @@ public class WrapImageShareActivity extends AppCompatActivity {
                 Log.e("TAG", "onCreate: " + fileURI.getPath());
                 if (fileURI != null) {
                     isSaved = true;
-                    MediaScannerConnection.scanFile(getApplicationContext(), new String[]{fileURI.getPath()}, new String[]{"image/jpeg"}, null);
+                    MediaScannerConnection.scanFile(getApplicationContext(),
+                            new String[]{fileURI.getPath()},
+                            new String[]{"image/jpeg"}, null);
                 }
             }
             if (isSaved) {
                 if (isFrom.equalsIgnoreCase(C1197util.MyWork)) {
                     Context applicationContext = getApplicationContext();
-                    uri = FileProvider.getUriForFile(applicationContext, getPackageName() + ".provider", new File(C1197util.wrapImagePath));
+                    uri = FileProvider.getUriForFile(applicationContext,
+                            getPackageName() + ".provider",
+                            new File(C1197util.wrapImagePath));
                 } else {
                     uri = fileURI;
                 }
@@ -138,9 +147,9 @@ public class WrapImageShareActivity extends AppCompatActivity {
         });
 
         this.ivSave.setOnClickListener(view -> {
-            // ✅ Premium users skip ads
-            if (isPremium) {
-                Log.d("WrapImageShare", "Premium user - saving directly without ad");
+            if (isPremium || !adsEnabled || !remoteConfigManager.isInterstitialEnabled()) {
+                Log.e(LOG_TAG, "Skipping ad - Premium: " + isPremium
+                        + ", Ads Enabled: " + adsEnabled);
                 saveImage();
             } else {
                 showInterstitial();
@@ -154,48 +163,112 @@ public class WrapImageShareActivity extends AppCompatActivity {
             this.ivSave.setVisibility(View.GONE);
             this.iv_image.setVisibility(View.GONE);
         }
+
+        // ✅ Remote Config — fetch FIRST, then read values
+        remoteConfigManager = RemoteConfigManager.getInstance();
+
+        remoteConfigManager.fetchRemoteConfigSync(() -> {
+
+            // 🔴 GUARANTEED-VISIBLE LOG
+            Log.e(LOG_TAG, "=== Remote Config READY ===");
+            Log.e(LOG_TAG, "Ads Enabled       = " + remoteConfigManager.isAdsEnabled());
+            Log.e(LOG_TAG, "Banner Enabled    = " + remoteConfigManager.isBannerEnabled());
+            Log.e(LOG_TAG, "Interstitial En.  = " + remoteConfigManager.isInterstitialEnabled());
+            Log.e(LOG_TAG, "Native Enabled    = " + remoteConfigManager.isNativeEnabled());
+            Log.e(LOG_TAG, "App Open Enabled  = " + remoteConfigManager.isAppOpenEnabled());
+            Log.e(LOG_TAG, "Premium Enabled   = " + remoteConfigManager.isPremiumEnabled());
+            Log.e(LOG_TAG, "Banner Ad ID      = [" + remoteConfigManager.getBannerAdId() + "]");
+            Log.e(LOG_TAG, "Interstitial ID   = [" + remoteConfigManager.getInterstitialAdId() + "]");
+            Log.e(LOG_TAG, "===========================");
+
+            // ✅ Now safely read values
+            isPremium = PremiumManager.isPremium(this) && remoteConfigManager.isPremiumEnabled();
+            adsEnabled = remoteConfigManager.isAdsEnabled();
+
+            Log.e(LOG_TAG, "User is premium: " + isPremium);
+            Log.e(LOG_TAG, "Ads enabled: " + adsEnabled);
+
+            // ✅ Only load ads if NOT premium AND ads are enabled
+            if (!isPremium && adsEnabled) {
+                Log.e(LOG_TAG, "Free user with ads enabled - loading ads");
+                loadBanner();
+                loadInterstitialAd();
+            } else {
+                Log.e(LOG_TAG, "Premium user or ads disabled - hiding ads");
+                hideAds();
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // ✅ Refresh premium status
-        boolean currentPremium = PremiumManager.isPremium(this);
-        if (currentPremium != isPremium) {
-            isPremium = currentPremium;
-            Log.d("WrapImageShare", "Premium status changed to: " + isPremium);
-            updateAdVisibility();
+
+        // ✅ Only refresh if config was already fetched at least once
+        if (remoteConfigManager == null || !remoteConfigManager.isConfigReady()) {
+            return;
         }
+
+        remoteConfigManager.refresh();
+
+        remoteConfigManager.fetchRemoteConfigSync(() -> {
+
+            boolean currentPremium = PremiumManager.isPremium(this)
+                    && remoteConfigManager.isPremiumEnabled();
+            boolean currentAdsEnabled = remoteConfigManager.isAdsEnabled();
+
+            boolean statusChanged = (currentPremium != isPremium)
+                    || (currentAdsEnabled != adsEnabled);
+
+            if (statusChanged) {
+                isPremium = currentPremium;
+                adsEnabled = currentAdsEnabled;
+                Log.e(LOG_TAG, "Status changed - Premium: " + isPremium
+                        + ", Ads Enabled: " + adsEnabled);
+                updateAdVisibility();
+            }
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (adView != null) {
+            adView.destroy();
+            adView = null;
+        }
+        if (interstitialAd != null) {
+            interstitialAd = null;
+        }
+        super.onDestroy();
     }
 
     private void updateAdVisibility() {
-        if (isPremium) {
+        if (isPremium || !adsEnabled) {
             hideAds();
         } else {
-            if (adContainerView.getChildCount() == 0) {
+            if (adContainerView.getChildCount() == 0 && remoteConfigManager.isBannerEnabled()) {
                 loadBanner();
             }
-            if (interstitialAd == null && !adIsLoading) {
-                loadAd();
+            if (interstitialAd == null && !adIsLoading
+                    && remoteConfigManager.isInterstitialEnabled()) {
+                loadInterstitialAd();
             }
             adContainerView.setVisibility(View.VISIBLE);
         }
     }
 
     private void hideAds() {
-        // Hide banner
         if (adContainerView != null) {
             adContainerView.removeAllViews();
             adContainerView.setVisibility(View.GONE);
         }
-        // Remove interstitial
         if (interstitialAd != null) {
             interstitialAd = null;
         }
         adIsLoading = false;
     }
 
-    // ✅ New method to save image without ad
+    // ✅ Save image without ad
     private void saveImage() {
         if (!isSaved) {
             StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
@@ -203,15 +276,20 @@ public class WrapImageShareActivity extends AppCompatActivity {
             Log.e("TAG", "onCreate: " + fileURI.getPath());
             if (fileURI != null) {
                 isSaved = true;
-                MediaScannerConnection.scanFile(getApplicationContext(), new String[]{fileURI.getPath()}, new String[]{"image/jpeg"}, null);
+                MediaScannerConnection.scanFile(getApplicationContext(),
+                        new String[]{fileURI.getPath()},
+                        new String[]{"image/jpeg"}, null);
             }
-            startActivity(new Intent(WrapImageShareActivity.this, CreationActivity.class).addFlags(67108864));
+            startActivity(new Intent(WrapImageShareActivity.this, CreationActivity.class)
+                    .addFlags(67108864));
         }
     }
 
     public Uri saveBitmapInGalary(Bitmap bitmap) {
-        String file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).toString();
-        File file2 = new File(file + "/" + getResources().getString(R.string.app_name) + File.separator + "WarpImage");
+        String file = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DCIM).toString();
+        File file2 = new File(file + "/" + getResources().getString(R.string.app_name)
+                + File.separator + "WarpImage");
         file2.mkdirs();
         int nextInt = new Random().nextInt(10000);
         File file3 = new File(file2, "Image-" + nextInt + ".jpg");
@@ -235,26 +313,80 @@ public class WrapImageShareActivity extends AppCompatActivity {
         finish();
     }
 
+    // ================= BANNER AD =====================
+
     private void loadBanner() {
-        // ✅ Don't load banner if premium
-        if (isPremium) {
+        if (isPremium || !adsEnabled || !remoteConfigManager.isBannerEnabled()) {
+            Log.e(LOG_TAG, "Skipping banner - conditions not met");
+            return;
+        }
+
+        final String bannerAdId = remoteConfigManager.getBannerAdId();
+
+        // 🔴 GUARANTEED-VISIBLE LOG — right before ad request
+        Log.e(LOG_TAG, "Banner Ad ID = [" + bannerAdId + "]");
+
+        if (bannerAdId == null || bannerAdId.isEmpty()) {
+            Log.e(LOG_TAG, "❌ Banner Ad ID is EMPTY — skipping load");
+            adContainerView.setVisibility(View.GONE);
             return;
         }
 
         adView = new AdView(this);
-        adView.setAdUnitId(getResources().getString(R.string.banner));
+        adView.setAdUnitId(bannerAdId);
         adView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, 360));
 
         adContainerView.removeAllViews();
         adContainerView.addView(adView);
 
+        adView.setAdListener(new AdListener() {
+            @Override
+            public void onAdLoaded() {
+                Log.e(LOG_TAG, "✅ Banner ad loaded");
+            }
+
+            @Override
+            public void onAdFailedToLoad(@NonNull LoadAdError adError) {
+                Log.e(LOG_TAG, "❌ Banner ad failed: " + adError.getMessage()
+                        + " | code=" + adError.getCode()
+                        + " | domain=" + adError.getDomain());
+            }
+
+            @Override
+            public void onAdOpened() {
+                Log.e(LOG_TAG, "Banner ad opened");
+            }
+
+            @Override
+            public void onAdClicked() {
+                Log.e(LOG_TAG, "Banner ad clicked");
+                logAdClick("banner", bannerAdId);
+            }
+
+            @Override
+            public void onAdImpression() {
+                Log.e(LOG_TAG, "📊 Banner ad impression recorded");
+                logAdImpression("banner", bannerAdId);
+            }
+        });
+
+        adView.setOnPaidEventListener(adValue -> {
+            double revenue = adValue.getValueMicros() / 1_000_000.0;
+            String currency = adValue.getCurrencyCode();
+            Log.e(LOG_TAG, "💰 Banner paid event - Revenue: " + revenue + " " + currency);
+            sendRevenueToFirebase(revenue, currency, "banner", bannerAdId);
+        });
+
         AdRequest adRequest = new AdRequest.Builder().build();
         adView.loadAd(adRequest);
+        Log.e(LOG_TAG, "✅ Banner ad load initiated");
     }
 
-    public void loadAd() {
-        // ✅ Don't load interstitial if premium
-        if (isPremium) {
+    // ================= INTERSTITIAL AD =====================
+
+    public void loadInterstitialAd() {
+        if (isPremium || !adsEnabled || !remoteConfigManager.isInterstitialEnabled()) {
+            Log.e(LOG_TAG, "Skipping interstitial - conditions not met");
             return;
         }
 
@@ -262,51 +394,79 @@ public class WrapImageShareActivity extends AppCompatActivity {
             return;
         }
         adIsLoading = true;
+
+        final String interstitialAdId = remoteConfigManager.getInterstitialAdId();
+
+        // 🔴 GUARANTEED-VISIBLE LOG — right before ad request
+        Log.e(LOG_TAG, "Interstitial Ad ID = [" + interstitialAdId + "]");
+
+        if (interstitialAdId == null || interstitialAdId.isEmpty()) {
+            Log.e(LOG_TAG, "❌ Interstitial Ad ID is EMPTY — skipping load");
+            adIsLoading = false;
+            return;
+        }
+
         InterstitialAd.load(
                 this,
-                getResources().getString(R.string.interstial),
+                interstitialAdId,
                 new AdRequest.Builder().build(),
                 new InterstitialAdLoadCallback() {
                     @Override
                     public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
-                        Log.d(TAG, "Ad was loaded.");
+                        Log.e(LOG_TAG, "✅ Interstitial ad loaded");
                         WrapImageShareActivity.this.interstitialAd = interstitialAd;
                         adIsLoading = false;
+
+                        interstitialAd.setOnPaidEventListener(adValue -> {
+                            double revenue = adValue.getValueMicros() / 1_000_000.0;
+                            String currency = adValue.getCurrencyCode();
+                            Log.e(LOG_TAG, "💰 Interstitial paid event - Revenue: "
+                                    + revenue + " " + currency);
+                            sendRevenueToFirebase(revenue, currency,
+                                    "interstitial", interstitialAdId);
+                        });
+
                         interstitialAd.setFullScreenContentCallback(
                                 new FullScreenContentCallback() {
                                     @Override
                                     public void onAdDismissedFullScreenContent() {
-                                        Log.d(TAG, "The ad was dismissed.");
+                                        Log.e(LOG_TAG, "Interstitial dismissed");
                                         WrapImageShareActivity.this.interstitialAd = null;
                                         saveImage();
                                     }
 
                                     @Override
                                     public void onAdFailedToShowFullScreenContent(AdError adError) {
-                                        Log.d(TAG, "The ad failed to show.");
+                                        Log.e(LOG_TAG, "Interstitial failed to show: "
+                                                + adError.getMessage());
                                         WrapImageShareActivity.this.interstitialAd = null;
+                                        saveImage();
                                     }
 
                                     @Override
                                     public void onAdShowedFullScreenContent() {
-                                        Log.d(TAG, "The ad was shown.");
+                                        Log.e(LOG_TAG, "📊 Interstitial shown");
+                                        logAdImpression("interstitial", interstitialAdId);
                                     }
 
                                     @Override
                                     public void onAdImpression() {
-                                        Log.d(TAG, "The ad recorded an impression.");
+                                        Log.e(LOG_TAG, "Interstitial impression recorded");
                                     }
 
                                     @Override
                                     public void onAdClicked() {
-                                        Log.d(TAG, "The ad was clicked.");
+                                        Log.e(LOG_TAG, "Interstitial clicked");
+                                        logAdClick("interstitial", interstitialAdId);
                                     }
                                 });
                     }
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        Log.d(TAG, loadAdError.getMessage());
+                        Log.e(LOG_TAG, "❌ Interstitial failed: " + loadAdError.getMessage()
+                                + " | code=" + loadAdError.getCode()
+                                + " | domain=" + loadAdError.getDomain());
                         interstitialAd = null;
                         adIsLoading = false;
                         saveImage();
@@ -315,9 +475,9 @@ public class WrapImageShareActivity extends AppCompatActivity {
     }
 
     private void showInterstitial() {
-        // ✅ Premium users skip ads
-        if (isPremium) {
-            Log.d("WrapImageShare", "Premium user - skipping interstitial");
+        if (isPremium || !adsEnabled || !remoteConfigManager.isInterstitialEnabled()) {
+            Log.e(LOG_TAG, "Skipping interstitial - Premium: " + isPremium
+                    + ", Ads Enabled: " + adsEnabled);
             saveImage();
             return;
         }
@@ -325,9 +485,9 @@ public class WrapImageShareActivity extends AppCompatActivity {
         if (interstitialAd != null) {
             interstitialAd.show(this);
         } else {
-            Log.d(TAG, "The interstitial ad is still loading.");
+            Log.e(LOG_TAG, "Interstitial still loading — calling saveImage directly");
             saveImage();
-            loadAd();
+            loadInterstitialAd();
         }
     }
 
@@ -338,10 +498,12 @@ public class WrapImageShareActivity extends AppCompatActivity {
             getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
-                        .setAppearanceLightStatusBars(false);
-                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
-                        .setAppearanceLightNavigationBars(false);
+                WindowInsetsControllerCompat controller =
+                        ViewCompat.getWindowInsetsController(getWindow().getDecorView());
+                if (controller != null) {
+                    controller.setAppearanceLightStatusBars(false);
+                    controller.setAppearanceLightNavigationBars(false);
+                }
             }
         } else {
             getWindow().setFlags(
@@ -354,11 +516,64 @@ public class WrapImageShareActivity extends AppCompatActivity {
     }
 
     private void applyWindowInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
-            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
-            int navigationBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
-            view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
-            return insets;
-        });
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content),
+                (view, insets) -> {
+                    int statusBarHeight = insets.getInsets(
+                            WindowInsetsCompat.Type.statusBars()).top;
+                    int navigationBarHeight = insets.getInsets(
+                            WindowInsetsCompat.Type.navigationBars()).bottom;
+                    view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
+                    return insets;
+                });
+    }
+
+    // ================= FIREBASE ANALYTICS METHODS =====================
+
+    private void logAdImpression(String adFormat, String adUnitId) {
+        try {
+            Bundle bundle = new Bundle();
+            bundle.putString(FirebaseAnalytics.Param.AD_PLATFORM, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_SOURCE, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_FORMAT, adFormat);
+            bundle.putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId);
+            mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.AD_IMPRESSION, bundle);
+            Log.e(LOG_TAG, "📊 Logged ad_impression - Format: " + adFormat);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error logging ad_impression: " + e.getMessage());
+        }
+    }
+
+    private void logAdClick(String adFormat, String adUnitId) {
+        try {
+            Bundle bundle = new Bundle();
+            bundle.putString(FirebaseAnalytics.Param.AD_PLATFORM, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_SOURCE, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_FORMAT, adFormat);
+            bundle.putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId);
+//            mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.AD_CLICK, bundle);
+            Log.e(LOG_TAG, "📊 Logged ad_click - Format: " + adFormat);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error logging ad_click: " + e.getMessage());
+        }
+    }
+
+    private void sendRevenueToFirebase(double value, String currency,
+                                       String adFormat, String adUnitId) {
+        try {
+            if (value > 0) {
+                Bundle bundle = new Bundle();
+                bundle.putDouble(FirebaseAnalytics.Param.VALUE, value);
+                bundle.putString(FirebaseAnalytics.Param.CURRENCY, currency);
+                bundle.putString(FirebaseAnalytics.Param.AD_PLATFORM, "admob");
+                bundle.putString(FirebaseAnalytics.Param.AD_SOURCE, "admob");
+                bundle.putString(FirebaseAnalytics.Param.AD_FORMAT, adFormat);
+                bundle.putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId);
+                mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.AD_IMPRESSION, bundle);
+                Log.e(LOG_TAG, "💰 Revenue sent to Firebase: " + value + " "
+                        + currency + " (" + adFormat + ")");
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error sending revenue: " + e.getMessage());
+        }
     }
 }

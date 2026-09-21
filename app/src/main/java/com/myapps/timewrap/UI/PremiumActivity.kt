@@ -19,8 +19,11 @@ import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.myapps.timewrap.databinding.ActivityPaywallBinding
 import com.myapps.timewrap.splashAds.FirstPageMainActivity
+import com.myapps.timewrap.splashAds.RemoteConfigManager
 
 class PremiumActivity : BaseActivity() {
+
+    private val LOG_TAG = "PremiumActivity"
 
     private var interstitialAd: InterstitialAd? = null
     private var plans = emptyList<PlanUiModel>()
@@ -34,6 +37,9 @@ class PremiumActivity : BaseActivity() {
     var lineResolution: Int = 5
 
     private lateinit var binding: ActivityPaywallBinding
+    private lateinit var remoteConfigManager: RemoteConfigManager
+    private var isPremium = false
+    private var adsEnabled = true
 
     companion object {
         private const val PRODUCT_ID = "weekly_timewarp"
@@ -41,6 +47,10 @@ class PremiumActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 🔴 GUARANTEED-VISIBLE LOG
+        Log.e("CHECK", "=== PremiumActivity onCreate STARTED ===")
+
         if (Build.VERSION.SDK_INT > 29) {
             this.resolutionX = 720
             this.resolutionY = 1280
@@ -53,37 +63,72 @@ class PremiumActivity : BaseActivity() {
         setContentView(binding.root)
         applyWindowInsets()
 
-        if (PremiumManager.isPremium(this)) {
-            startActivity(Intent(this, FirstPageMainActivity::class.java))
-            finish()
-            return
+        // ✅ Remote Config
+        remoteConfigManager = RemoteConfigManager.getInstance()
+
+        // ✅ Fetch config FIRST, then read values
+        remoteConfigManager.fetchRemoteConfigSync {
+
+            // 🔴 GUARANTEED-VISIBLE LOG
+            Log.e(LOG_TAG, "=== Remote Config READY ===")
+            Log.e(LOG_TAG, "Ads Enabled       = " + remoteConfigManager.isAdsEnabled)
+            Log.e(LOG_TAG, "Banner Enabled    = " + remoteConfigManager.isBannerEnabled)
+            Log.e(LOG_TAG, "Interstitial En.  = " + remoteConfigManager.isInterstitialEnabled)
+            Log.e(LOG_TAG, "Native Enabled    = " + remoteConfigManager.isNativeEnabled)
+            Log.e(LOG_TAG, "App Open Enabled  = " + remoteConfigManager.isAppOpenEnabled)
+            Log.e(LOG_TAG, "Premium Enabled   = " + remoteConfigManager.isPremiumEnabled)
+            Log.e(LOG_TAG, "Interstitial ID   = [" + remoteConfigManager.interstitialAdId + "]")
+            Log.e(LOG_TAG, "Banner Ad ID      = [" + remoteConfigManager.bannerAdId + "]")
+            Log.e(LOG_TAG, "Native Ad ID      = [" + remoteConfigManager.nativeAdId + "]")
+            Log.e(LOG_TAG, "App Open Ad ID    = [" + remoteConfigManager.appOpenAdId + "]")
+            Log.e(LOG_TAG, "===========================")
+
+            // ✅ Now safely read values
+            isPremium = PremiumManager.isPremium(this) && remoteConfigManager.isPremiumEnabled
+            adsEnabled = remoteConfigManager.isAdsEnabled
+
+            Log.e(LOG_TAG, "User is premium: $isPremium")
+            Log.e(LOG_TAG, "Ads enabled: $adsEnabled")
+
+            if (isPremium) {
+                Log.e(LOG_TAG, "Premium user - redirecting")
+                startActivity(Intent(this, FirstPageMainActivity::class.java))
+                finish()
+                return@fetchRemoteConfigSync
+            }
+
+            initViews()
+            setupClicks()
+            showLoadingState()
+
+            // Start billing initialization
+            startBilling()
+
+            // ✅ Only load interstitial if NOT premium AND ads enabled AND interstitial enabled
+            if (!isPremium && adsEnabled && remoteConfigManager.isInterstitialEnabled) {
+                Log.e(LOG_TAG, "Loading interstitial ad")
+                loadAd()
+            } else {
+                Log.e(LOG_TAG, "Skipping ad load - Premium: $isPremium"
+                        + ", Ads Enabled: $adsEnabled"
+                        + ", Interstitial Enabled: " + remoteConfigManager.isInterstitialEnabled)
+            }
+
+            showCloseButtonAfterDelay()
         }
-
-        initViews()
-        setupClicks()
-        showLoadingState()
-
-        // Start billing initialization
-        startBilling()
-
-        if (PremiumManager.shouldShowAds(this)) {
-            loadAd()
-        }
-
-        showCloseButtonAfterDelay()
     }
 
     private fun startBilling() {
-        Log.d("PremiumActivity", "🚀 Starting billing initialization...")
+        Log.e(LOG_TAG, "🚀 Starting billing initialization...")
 
         BillingRepository.init(
             this,
             onReady = {
-                Log.d("PremiumActivity", "✅ Billing onReady callback triggered!")
+                Log.e(LOG_TAG, "✅ Billing onReady callback triggered!")
                 handleBillingReady()
             },
             onPremiumUnlocked = {
-                Log.d("PremiumActivity", "🎉 Premium unlocked callback!")
+                Log.e(LOG_TAG, "🎉 Premium unlocked callback!")
                 setResult(RESULT_OK)
                 startActivity(Intent(this, FirstPageMainActivity::class.java))
                 finish()
@@ -92,17 +137,15 @@ class PremiumActivity : BaseActivity() {
     }
 
     private fun handleBillingReady() {
-        // Get plans from repository
         plans = BillingRepository.getCachedPlans()
-        Log.d("PremiumActivity", "📦 Retrieved ${plans.size} plans from cache")
+        Log.e(LOG_TAG, "📦 Retrieved ${plans.size} plans from cache")
 
-        // ⭐ IMPORTANT: Run on UI thread
         runOnUiThread {
             if (plans.isNotEmpty()) {
                 bindPlans()
                 logPlansStatus()
             } else {
-                Log.d("PremiumActivity", "⚠️ Plans empty, starting polling...")
+                Log.e(LOG_TAG, "⚠️ Plans empty, starting polling...")
                 BillingRepository.fetchPlans()
                 startPollingForPlans()
             }
@@ -117,10 +160,10 @@ class PremiumActivity : BaseActivity() {
             override fun run() {
                 pollCount++
                 plans = BillingRepository.getCachedPlans()
-                Log.d("PremiumActivity", "🔄 Poll $pollCount: ${plans.size} plans found")
+                Log.e(LOG_TAG, "🔄 Poll $pollCount: ${plans.size} plans found")
 
                 if (plans.isNotEmpty()) {
-                    Log.d("PremiumActivity", "✅ Plans found on poll $pollCount!")
+                    Log.e(LOG_TAG, "✅ Plans found on poll $pollCount!")
                     runOnUiThread {
                         bindPlans()
                         logPlansStatus()
@@ -128,7 +171,7 @@ class PremiumActivity : BaseActivity() {
                 } else if (pollCount < maxPolls) {
                     handler.postDelayed(this, 1000)
                 } else {
-                    Log.e("PremiumActivity", "❌ No plans found after $maxPolls polls")
+                    Log.e(LOG_TAG, "❌ No plans found after $maxPolls polls")
                     runOnUiThread {
                         showErrorState("Failed to load plans")
                     }
@@ -152,12 +195,12 @@ class PremiumActivity : BaseActivity() {
     }
 
     private fun bindPlans() {
-        Log.d("PremiumActivity", "🔍 bindPlans() - Plans size: ${plans.size}")
+        Log.e(LOG_TAG, "🔍 bindPlans() - Plans size: ${plans.size}")
 
         if (plans.isEmpty()) {
             if (retryCount < MAX_RETRIES) {
                 retryCount++
-                Log.d("PremiumActivity", "🔄 Retry $retryCount/$MAX_RETRIES")
+                Log.e(LOG_TAG, "🔄 Retry $retryCount/$MAX_RETRIES")
                 handler.postDelayed({
                     BillingRepository.fetchPlans()
                     plans = BillingRepository.getCachedPlans()
@@ -170,18 +213,17 @@ class PremiumActivity : BaseActivity() {
         }
 
         val weeklyPlan = plans.find { it.id == PRODUCT_ID }
-        Log.d("PremiumActivity", "🔍 Looking for '$PRODUCT_ID'...")
+        Log.e(LOG_TAG, "🔍 Looking for '$PRODUCT_ID'...")
 
         if (weeklyPlan == null) {
-            Log.e("PremiumActivity", "❌ '$PRODUCT_ID' NOT FOUND!")
-            Log.d("PremiumActivity", "Available IDs: ${plans.map { it.id }}")
+            Log.e(LOG_TAG, "❌ '$PRODUCT_ID' NOT FOUND!")
+            Log.e(LOG_TAG, "Available IDs: ${plans.map { it.id }}")
             showErrorState("Plan not found")
             return
         }
 
-        Log.d("PremiumActivity", "✅ Found plan: ${weeklyPlan.id} - ${weeklyPlan.price}")
+        Log.e(LOG_TAG, "✅ Found plan: ${weeklyPlan.id} - ${weeklyPlan.price}")
 
-        // ⭐ CRITICAL: Update UI on main thread
         runOnUiThread {
             showPlanState(weeklyPlan)
         }
@@ -195,7 +237,7 @@ class PremiumActivity : BaseActivity() {
     }
 
     private fun showErrorState(message: String) {
-        Log.e("PremiumActivity", "❌ Error: $message")
+        Log.e(LOG_TAG, "❌ Error: $message")
         binding.btnStartTrial.text = "Retry"
         binding.btnStartTrial.isEnabled = true
         binding.tvPrice?.text = message
@@ -213,18 +255,15 @@ class PremiumActivity : BaseActivity() {
     }
 
     private fun showPlanState(plan: PlanUiModel) {
-        Log.d("PremiumActivity", "📱 Updating UI with plan: ${plan.price}")
+        Log.e(LOG_TAG, "📱 Updating UI with plan: ${plan.price}")
 
-        // ⭐ Update button
         binding.btnStartTrial.text = if (plan.hasFreeTrial) "START FREE TRIAL" else "SUBSCRIBE NOW"
         binding.btnStartTrial.isEnabled = true
         binding.btnStartTrial.visibility = View.VISIBLE
 
-        // ⭐ Update price
-        binding.tvPrice?.text = plan.price+"/week"
+        binding.tvPrice?.text = plan.price + "/week"
         binding.tvPrice?.visibility = View.VISIBLE
 
-        // ⭐ Force refresh
         binding.btnStartTrial.post {
             binding.btnStartTrial.requestLayout()
             binding.btnStartTrial.invalidate()
@@ -236,30 +275,29 @@ class PremiumActivity : BaseActivity() {
 
         retryCount = 0
 
-        // ⭐ Set click listener
         binding.btnStartTrial.setOnClickListener {
-            Log.d("PremiumActivity", "🛒 Purchasing: ${plan.id}")
+            Log.e(LOG_TAG, "🛒 Purchasing: ${plan.id}")
             BillingRepository.launchPurchase(this, plan)
         }
 
-        Log.d("PremiumActivity", "✅ UI Updated - Button: ${binding.btnStartTrial.text}, Price: ${binding.tvPrice?.text}")
+        Log.e(LOG_TAG, "✅ UI Updated - Button: ${binding.btnStartTrial.text}, Price: ${binding.tvPrice?.text}")
     }
 
     private fun logPlansStatus() {
-        Log.d("PremiumActivity", "========= PLANS DEBUG =========")
+        Log.e(LOG_TAG, "========= PLANS DEBUG =========")
         if (plans.isEmpty()) {
-            Log.e("PremiumActivity", "❌ No plans available!")
+            Log.e(LOG_TAG, "❌ No plans available!")
         } else {
             plans.forEachIndexed { index, plan ->
-                Log.d("PremiumActivity", "[$index] ID: ${plan.id}, Price: ${plan.price}, Trial: ${plan.hasFreeTrial}")
+                Log.e(LOG_TAG, "[$index] ID: ${plan.id}, Price: ${plan.price}, Trial: ${plan.hasFreeTrial}")
             }
         }
-        Log.d("PremiumActivity", "================================")
+        Log.e(LOG_TAG, "================================")
     }
 
     private fun setupClicks() {
         binding.btnClose.setOnClickListener {
-            if (PremiumManager.isPremium(this)) {
+            if (PremiumManager.isPremium(this) && remoteConfigManager.isPremiumEnabled) {
                 startActivity(Intent(this, MainActivity::class.java))
                 finish()
                 return@setOnClickListener
@@ -276,7 +314,20 @@ class PremiumActivity : BaseActivity() {
     }
 
     private fun loadAd() {
-        val interstitialAdId = "ca-app-pub-5969006643846426/8974610806"
+        if (isPremium || !adsEnabled || !remoteConfigManager.isInterstitialEnabled) {
+            Log.e(LOG_TAG, "Skipping ad load - conditions not met")
+            return
+        }
+
+        val interstitialAdId = remoteConfigManager.interstitialAdId
+
+        // 🔴 GUARANTEED-VISIBLE LOG — right before ad request
+        Log.e(LOG_TAG, "Interstitial Ad ID = [$interstitialAdId]")
+
+        if (interstitialAdId.isNullOrEmpty()) {
+            Log.e(LOG_TAG, "❌ Interstitial Ad ID is EMPTY — skipping load")
+            return
+        }
 
         InterstitialAd.load(
             this,
@@ -285,23 +336,31 @@ class PremiumActivity : BaseActivity() {
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {
                     interstitialAd = ad
-                    Log.d("AdManager", "✅ Interstitial ad loaded")
+                    Log.e(LOG_TAG, "✅ Interstitial ad loaded")
                     ad.setOnPaidEventListener { adValue ->
                         val revenue = adValue.valueMicros / 1_000_000.0
-                        Log.d("AdManager", "💰 Revenue: $revenue ${adValue.currencyCode}")
+                        Log.e(LOG_TAG, "💰 Revenue: $revenue ${adValue.currencyCode}")
                     }
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     interstitialAd = null
-                    Log.e("AdManager", "❌ Ad failed: ${adError.message}")
+                    Log.e(LOG_TAG, "❌ Ad failed: ${adError.message}"
+                            + " | code=${adError.code}"
+                            + " | domain=${adError.domain}")
                 }
             }
         )
     }
 
     private fun showAdOnClose() {
-        if (!PremiumManager.shouldShowAds(this) || interstitialAd == null) {
+        val shouldShowAds = !PremiumManager.isPremium(this) &&
+                remoteConfigManager.isPremiumEnabled &&
+                adsEnabled &&
+                remoteConfigManager.isInterstitialEnabled
+
+        if (!shouldShowAds || interstitialAd == null) {
+            Log.e(LOG_TAG, "Skipping ad on close - conditions not met")
             navigateToMain()
             return
         }
@@ -312,12 +371,12 @@ class PremiumActivity : BaseActivity() {
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                Log.e("AdManager", "❌ Failed to show ad: ${adError.message}")
+                Log.e(LOG_TAG, "❌ Failed to show ad: ${adError.message}")
                 navigateToMain()
             }
 
             override fun onAdShowedFullScreenContent() {
-                Log.d("AdManager", "✅ Ad showed")
+                Log.e(LOG_TAG, "✅ Ad showed")
             }
         }
 
@@ -329,9 +388,45 @@ class PremiumActivity : BaseActivity() {
         finish()
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        // ✅ Only refresh if config was already fetched at least once
+        if (!remoteConfigManager.isConfigReady) {
+            return
+        }
+
+        remoteConfigManager.refresh()
+
+        remoteConfigManager.fetchRemoteConfigSync {
+
+            val currentPremium = PremiumManager.isPremium(this)
+                    && remoteConfigManager.isPremiumEnabled
+            val currentAdsEnabled = remoteConfigManager.isAdsEnabled
+            val currentInterstitialEnabled = remoteConfigManager.isInterstitialEnabled
+
+            val statusChanged = (currentPremium != isPremium)
+                    || (currentAdsEnabled != adsEnabled)
+
+            if (statusChanged) {
+                isPremium = currentPremium
+                adsEnabled = currentAdsEnabled
+                Log.e(LOG_TAG, "Status changed - Premium: $isPremium"
+                        + ", Ads Enabled: $adsEnabled"
+                        + ", Interstitial Enabled: $currentInterstitialEnabled")
+
+                if (!isPremium && adsEnabled && currentInterstitialEnabled
+                    && interstitialAd == null) {
+                    loadAd()
+                }
+            }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
+        interstitialAd = null
     }
 
     override fun onBackPressed() {
@@ -339,17 +434,13 @@ class PremiumActivity : BaseActivity() {
     }
 
     private fun applyWindowInsets() {
-        // For the root view of your layout
         ViewCompat.setOnApplyWindowInsetsListener(
             findViewById<View?>(R.id.content),
             OnApplyWindowInsetsListener { view: View?, insets: WindowInsetsCompat? ->
-                // Get insets for system bars
                 val statusBarHeight = insets!!.getInsets(WindowInsetsCompat.Type.statusBars()).top
                 val navigationBarHeight =
                     insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
 
-                // Apply padding to your root layout to avoid overlapping with system bars
-                // If you want your content to go under system bars, remove this
                 view!!.setPadding(0, statusBarHeight, 0, navigationBarHeight)
                 insets
             })

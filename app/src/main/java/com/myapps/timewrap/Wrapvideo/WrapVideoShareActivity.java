@@ -1,7 +1,6 @@
 package com.myapps.timewrap.Wrapvideo;
 
-import static android.content.ContentValues.TAG;
-
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -25,8 +24,10 @@ import androidx.core.content.FileProvider;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
@@ -34,18 +35,24 @@ import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.myapps.timewrap.R;
 import com.myapps.timewrap.UI.CreationActivity;
 import com.myapps.timewrap.UI.MainActivity;
 import com.myapps.timewrap.UI.PremiumManager;
 import com.myapps.timewrap.UI.WaterfallShareActivity;
 import com.myapps.timewrap.Utils.C1197util;
+import com.myapps.timewrap.splashAds.RemoteConfigManager;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.channels.FileChannel;
 
 public class WrapVideoShareActivity extends AppCompatActivity {
+
+    private static final String LOG_TAG = "WrapVideoShare";
+
     String isFrom = "";
     boolean isSave = false;
     ImageView ivBack;
@@ -61,29 +68,29 @@ public class WrapVideoShareActivity extends AppCompatActivity {
     private InterstitialAd interstitialAd;
     private boolean adIsLoading;
     private boolean isPremium = false;
+    private boolean adsEnabled = true;
+    private RemoteConfigManager remoteConfigManager;
 
+    // ✅ Firebase Analytics
+    private FirebaseAnalytics mFirebaseAnalytics;
+
+    @SuppressLint("MissingInflatedId")
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
+
+        // 🔴 GUARANTEED-VISIBLE LOG
+        Log.e("CHECK", "=== WrapVideoShareActivity onCreate STARTED ===");
+
         enableEdgeToEdge();
         setContentView(R.layout.activity_wrap_video_view);
         applyWindowInsets();
 
-        // ✅ Check if user is premium
-        isPremium = PremiumManager.isPremium(this);
-        Log.d("WrapVideoShare", "User is premium: " + isPremium);
+        // ✅ Firebase Analytics
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+        Log.e(LOG_TAG, "Firebase Analytics initialized");
 
+        // ✅ Bind views first (no config dependency)
         adContainerView = findViewById(R.id.ad_view_container);
-
-        // ✅ Only load ads if user is NOT premium
-        if (!isPremium) {
-            Log.d("WrapVideoShare", "Free user - loading ads");
-            loadBanner();
-            loadAd();
-        } else {
-            Log.d("WrapVideoShare", "Premium user - hiding ads");
-            hideAds();
-        }
-
         this.videoView = findViewById(R.id.vidView);
         this.previewViewImageView = findViewById(R.id.previewView_ImageView);
         this.ivBack = findViewById(R.id.iv_back);
@@ -91,12 +98,14 @@ public class WrapVideoShareActivity extends AppCompatActivity {
         this.ivShare = findViewById(R.id.iv_share);
         this.iv_image = findViewById(R.id.iv_image);
 
+        // ✅ Read intent extras
         Bundle extras = getIntent().getExtras();
         if (!(extras == null || extras.getString("from") == null)) {
             this.isFrom = extras.getString("from");
-            Log.d("nmnmnmnm", "-----" + this.isFrom);
+            Log.e(LOG_TAG, "isFrom = " + this.isFrom);
         }
 
+        // ✅ Setup video playback (no config dependency)
         MediaController mediaController = new MediaController(this);
         mediaController.setMediaPlayer(this.videoView);
         mediaController.setAnchorView(this.videoView);
@@ -104,19 +113,21 @@ public class WrapVideoShareActivity extends AppCompatActivity {
         this.videoView.setVideoPath(C1197util.wrapVideoFile.getAbsolutePath());
         this.videoView.start();
 
+        // ✅ Setup click listeners
         this.ivBack.setOnClickListener(view -> onBackPressed());
 
         this.iv_image.setOnClickListener(view -> {
-            startActivity(new Intent(WrapVideoShareActivity.this, CreationActivity.class).addFlags(67108864));
+            startActivity(new Intent(WrapVideoShareActivity.this, CreationActivity.class)
+                    .addFlags(67108864));
             finish();
         });
 
         this.ivShare.setOnClickListener(view -> ivSHAREit(view));
 
         this.ivSave.setOnClickListener(view -> {
-            // ✅ Premium users skip ads
-            if (isPremium) {
-                Log.d("WrapVideoShare", "Premium user - saving directly without ad");
+            if (isPremium || !adsEnabled || !remoteConfigManager.isInterstitialEnabled()) {
+                Log.e(LOG_TAG, "Skipping ad - Premium: " + isPremium
+                        + ", Ads Enabled: " + adsEnabled);
                 ivSAVEit(null);
             } else {
                 showInterstitial();
@@ -128,41 +139,105 @@ public class WrapVideoShareActivity extends AppCompatActivity {
             this.ivSave.setVisibility(View.GONE);
             this.iv_image.setVisibility(View.GONE);
         }
+
+        // ✅ Remote Config — fetch FIRST, then read values
+        remoteConfigManager = RemoteConfigManager.getInstance();
+
+        remoteConfigManager.fetchRemoteConfigSync(() -> {
+
+            // 🔴 GUARANTEED-VISIBLE LOG
+            Log.e(LOG_TAG, "=== Remote Config READY ===");
+            Log.e(LOG_TAG, "Ads Enabled       = " + remoteConfigManager.isAdsEnabled());
+            Log.e(LOG_TAG, "Banner Enabled    = " + remoteConfigManager.isBannerEnabled());
+            Log.e(LOG_TAG, "Interstitial En.  = " + remoteConfigManager.isInterstitialEnabled());
+            Log.e(LOG_TAG, "Native Enabled    = " + remoteConfigManager.isNativeEnabled());
+            Log.e(LOG_TAG, "App Open Enabled  = " + remoteConfigManager.isAppOpenEnabled());
+            Log.e(LOG_TAG, "Premium Enabled   = " + remoteConfigManager.isPremiumEnabled());
+            Log.e(LOG_TAG, "Banner Ad ID      = [" + remoteConfigManager.getBannerAdId() + "]");
+            Log.e(LOG_TAG, "Interstitial ID   = [" + remoteConfigManager.getInterstitialAdId() + "]");
+            Log.e(LOG_TAG, "===========================");
+
+            // ✅ Now safely read values
+            isPremium = PremiumManager.isPremium(this) && remoteConfigManager.isPremiumEnabled();
+            adsEnabled = remoteConfigManager.isAdsEnabled();
+
+            Log.e(LOG_TAG, "User is premium: " + isPremium);
+            Log.e(LOG_TAG, "Ads enabled: " + adsEnabled);
+
+            // ✅ Only load ads if NOT premium AND ads are enabled
+            if (!isPremium && adsEnabled) {
+                Log.e(LOG_TAG, "Free user with ads enabled - loading ads");
+                loadBanner();
+                loadInterstitialAd();
+            } else {
+                Log.e(LOG_TAG, "Premium user or ads disabled - hiding ads");
+                hideAds();
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // ✅ Refresh premium status
-        boolean currentPremium = PremiumManager.isPremium(this);
-        if (currentPremium != isPremium) {
-            isPremium = currentPremium;
-            Log.d("WrapVideoShare", "Premium status changed to: " + isPremium);
-            updateAdVisibility();
+
+        // ✅ Only refresh if config was already fetched at least once
+        if (remoteConfigManager == null || !remoteConfigManager.isConfigReady()) {
+            return;
         }
+
+        remoteConfigManager.refresh();
+
+        remoteConfigManager.fetchRemoteConfigSync(() -> {
+
+            boolean currentPremium = PremiumManager.isPremium(this)
+                    && remoteConfigManager.isPremiumEnabled();
+            boolean currentAdsEnabled = remoteConfigManager.isAdsEnabled();
+
+            boolean statusChanged = (currentPremium != isPremium)
+                    || (currentAdsEnabled != adsEnabled);
+
+            if (statusChanged) {
+                isPremium = currentPremium;
+                adsEnabled = currentAdsEnabled;
+                Log.e(LOG_TAG, "Status changed - Premium: " + isPremium
+                        + ", Ads Enabled: " + adsEnabled);
+                updateAdVisibility();
+            }
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (adView != null) {
+            adView.destroy();
+            adView = null;
+        }
+        if (interstitialAd != null) {
+            interstitialAd = null;
+        }
+        super.onDestroy();
     }
 
     private void updateAdVisibility() {
-        if (isPremium) {
+        if (isPremium || !adsEnabled) {
             hideAds();
         } else {
-            if (adContainerView.getChildCount() == 0) {
+            if (adContainerView.getChildCount() == 0 && remoteConfigManager.isBannerEnabled()) {
                 loadBanner();
             }
-            if (interstitialAd == null && !adIsLoading) {
-                loadAd();
+            if (interstitialAd == null && !adIsLoading
+                    && remoteConfigManager.isInterstitialEnabled()) {
+                loadInterstitialAd();
             }
             adContainerView.setVisibility(View.VISIBLE);
         }
     }
 
     private void hideAds() {
-        // Hide banner
         if (adContainerView != null) {
             adContainerView.removeAllViews();
             adContainerView.setVisibility(View.GONE);
         }
-        // Remove interstitial
         if (interstitialAd != null) {
             interstitialAd = null;
         }
@@ -172,15 +247,16 @@ public class WrapVideoShareActivity extends AppCompatActivity {
     public void ivSHAREit(View view) {
         Uri uri;
         if (!this.isSave) {
-            Log.e("TAG", "onCreate wrapVideoFile : " + C1197util.wrapVideoFile);
+            Log.e(LOG_TAG, "wrapVideoFile : " + C1197util.wrapVideoFile);
             addVideoToGalleryOnlyshare(C1197util.wrapVideoFile);
         }
         if (this.isSave) {
             if (this.isFrom.equalsIgnoreCase(C1197util.MyWork)) {
-                Log.d("jijijj", "shaRE VIDEO-----" + C1197util.wrapVideoFile);
-                Log.d("jijijj", "shaRE uRI-----" + Uri.parse(String.valueOf(C1197util.wrapVideoFile)));
+                Log.e(LOG_TAG, "SHARE VIDEO = " + C1197util.wrapVideoFile);
+                Log.e(LOG_TAG, "SHARE URI   = " + Uri.parse(String.valueOf(C1197util.wrapVideoFile)));
                 Context applicationContext = getApplicationContext();
-                uri = FileProvider.getUriForFile(applicationContext, getPackageName() + ".provider", C1197util.wrapVideoFile);
+                uri = FileProvider.getUriForFile(applicationContext,
+                        getPackageName() + ".provider", C1197util.wrapVideoFile);
             } else {
                 uri = this.lastRecordedFile;
             }
@@ -194,7 +270,7 @@ public class WrapVideoShareActivity extends AppCompatActivity {
 
     public void ivSAVEit(View view) {
         if (!this.isSave) {
-            Log.e("TAG", "onCreate wrapVideoFile : " + C1197util.wrapVideoFile);
+            Log.e(LOG_TAG, "wrapVideoFile : " + C1197util.wrapVideoFile);
             addVideoToGallery(C1197util.wrapVideoFile);
         }
     }
@@ -205,19 +281,21 @@ public class WrapVideoShareActivity extends AppCompatActivity {
             String absolutePath = file.getAbsolutePath();
             String substring = absolutePath.substring(absolutePath.lastIndexOf("/") + 1);
             new ContentValues();
-            File file2 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + File.separator + getString(R.string.app_name) + File.separator + "WrapVideo");
+            File file2 = new File(Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DCIM) + File.separator
+                    + getString(R.string.app_name) + File.separator + "WrapVideo");
             if (!file2.exists()) {
                 file2.mkdir();
                 file2.mkdirs();
             }
             File file3 = new File(file2, substring);
             C1197util.wrapVideoFile = file3;
-            Log.d("jijijj", "addVideoToGallery-----" + C1197util.wrapVideoFile);
+            Log.e(LOG_TAG, "addVideoToGallery = " + C1197util.wrapVideoFile);
             if (copyFileToOther(file.getAbsolutePath(), file3.getAbsolutePath())) {
                 this.isSave = true;
             }
         } catch (Exception e) {
-            Log.d("SaveVideo", "e2--" + e.getMessage());
+            Log.e("SaveVideo", "e2--" + e.getMessage());
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
@@ -229,21 +307,23 @@ public class WrapVideoShareActivity extends AppCompatActivity {
             String absolutePath = file.getAbsolutePath();
             String substring = absolutePath.substring(absolutePath.lastIndexOf("/") + 1);
             new ContentValues();
-            File file2 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + File.separator + getString(R.string.app_name) + File.separator + "WrapVideo");
+            File file2 = new File(Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DCIM) + File.separator
+                    + getString(R.string.app_name) + File.separator + "WrapVideo");
             if (!file2.exists()) {
                 file2.mkdir();
                 file2.mkdirs();
             }
             File file3 = new File(file2, substring);
             C1197util.wrapVideoFile = file3;
-            Log.d("jijijj", "addVideoToGallery-----" + C1197util.wrapVideoFile);
+            Log.e(LOG_TAG, "addVideoToGallery = " + C1197util.wrapVideoFile);
             if (copyFileToOther(file.getAbsolutePath(), file3.getAbsolutePath())) {
                 this.isSave = true;
                 Toast.makeText(this, "Save Successfully", Toast.LENGTH_SHORT).show();
                 startActivity(new Intent(this, CreationActivity.class).addFlags(67108864));
             }
         } catch (Exception e) {
-            Log.d("SaveVideo", "e2--" + e.getMessage());
+            Log.e("SaveVideo", "e2--" + e.getMessage());
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
@@ -251,8 +331,8 @@ public class WrapVideoShareActivity extends AppCompatActivity {
 
     public static boolean copyFileToOther(String str, String str2) throws Throwable {
         FileChannel fileChannel;
-        Log.d("SaveVideo", "copyFileToOther from--" + str);
-        Log.d("SaveVideo", "copyFileToOther to--" + str2);
+        Log.e("SaveVideo", "copyFileToOther from--" + str);
+        Log.e("SaveVideo", "copyFileToOther to--" + str2);
         File file = new File(str);
         File file2 = new File(str2);
         try {
@@ -298,7 +378,7 @@ public class WrapVideoShareActivity extends AppCompatActivity {
                 throw th2;
             }
         } catch (Exception e) {
-            Log.d("SaveVideo", "exce--" + e.getMessage());
+            Log.e("SaveVideo", "exce--" + e.getMessage());
             return false;
         }
     }
@@ -307,26 +387,80 @@ public class WrapVideoShareActivity extends AppCompatActivity {
         finish();
     }
 
+    // ================= BANNER AD =====================
+
     private void loadBanner() {
-        // ✅ Don't load banner if premium
-        if (isPremium) {
+        if (isPremium || !adsEnabled || !remoteConfigManager.isBannerEnabled()) {
+            Log.e(LOG_TAG, "Skipping banner - conditions not met");
+            return;
+        }
+
+        final String bannerAdId = remoteConfigManager.getBannerAdId();
+
+        // 🔴 GUARANTEED-VISIBLE LOG — right before ad request
+        Log.e(LOG_TAG, "Banner Ad ID = [" + bannerAdId + "]");
+
+        if (bannerAdId == null || bannerAdId.isEmpty()) {
+            Log.e(LOG_TAG, "❌ Banner Ad ID is EMPTY — skipping load");
+            adContainerView.setVisibility(View.GONE);
             return;
         }
 
         adView = new AdView(this);
-        adView.setAdUnitId(getResources().getString(R.string.banner));
+        adView.setAdUnitId(bannerAdId);
         adView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, 360));
 
         adContainerView.removeAllViews();
         adContainerView.addView(adView);
 
+        adView.setAdListener(new AdListener() {
+            @Override
+            public void onAdLoaded() {
+                Log.e(LOG_TAG, "✅ Banner ad loaded");
+            }
+
+            @Override
+            public void onAdFailedToLoad(@NonNull LoadAdError adError) {
+                Log.e(LOG_TAG, "❌ Banner ad failed: " + adError.getMessage()
+                        + " | code=" + adError.getCode()
+                        + " | domain=" + adError.getDomain());
+            }
+
+            @Override
+            public void onAdOpened() {
+                Log.e(LOG_TAG, "Banner ad opened");
+            }
+
+            @Override
+            public void onAdClicked() {
+                Log.e(LOG_TAG, "Banner ad clicked");
+                logAdClick("banner", bannerAdId);
+            }
+
+            @Override
+            public void onAdImpression() {
+                Log.e(LOG_TAG, "📊 Banner ad impression recorded");
+                logAdImpression("banner", bannerAdId);
+            }
+        });
+
+        adView.setOnPaidEventListener(adValue -> {
+            double revenue = adValue.getValueMicros() / 1_000_000.0;
+            String currency = adValue.getCurrencyCode();
+            Log.e(LOG_TAG, "💰 Banner paid event - Revenue: " + revenue + " " + currency);
+            sendRevenueToFirebase(revenue, currency, "banner", bannerAdId);
+        });
+
         AdRequest adRequest = new AdRequest.Builder().build();
         adView.loadAd(adRequest);
+        Log.e(LOG_TAG, "✅ Banner ad load initiated");
     }
 
-    public void loadAd() {
-        // ✅ Don't load interstitial if premium
-        if (isPremium) {
+    // ================= INTERSTITIAL AD =====================
+
+    public void loadInterstitialAd() {
+        if (isPremium || !adsEnabled || !remoteConfigManager.isInterstitialEnabled()) {
+            Log.e(LOG_TAG, "Skipping interstitial - conditions not met");
             return;
         }
 
@@ -334,51 +468,79 @@ public class WrapVideoShareActivity extends AppCompatActivity {
             return;
         }
         adIsLoading = true;
+
+        final String interstitialAdId = remoteConfigManager.getInterstitialAdId();
+
+        // 🔴 GUARANTEED-VISIBLE LOG — right before ad request
+        Log.e(LOG_TAG, "Interstitial Ad ID = [" + interstitialAdId + "]");
+
+        if (interstitialAdId == null || interstitialAdId.isEmpty()) {
+            Log.e(LOG_TAG, "❌ Interstitial Ad ID is EMPTY — skipping load");
+            adIsLoading = false;
+            return;
+        }
+
         InterstitialAd.load(
                 this,
-                getResources().getString(R.string.interstial),
+                interstitialAdId,
                 new AdRequest.Builder().build(),
                 new InterstitialAdLoadCallback() {
                     @Override
                     public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
-                        Log.d(TAG, "Ad was loaded.");
+                        Log.e(LOG_TAG, "✅ Interstitial ad loaded");
                         WrapVideoShareActivity.this.interstitialAd = interstitialAd;
                         adIsLoading = false;
+
+                        interstitialAd.setOnPaidEventListener(adValue -> {
+                            double revenue = adValue.getValueMicros() / 1_000_000.0;
+                            String currency = adValue.getCurrencyCode();
+                            Log.e(LOG_TAG, "💰 Interstitial paid event - Revenue: "
+                                    + revenue + " " + currency);
+                            sendRevenueToFirebase(revenue, currency,
+                                    "interstitial", interstitialAdId);
+                        });
+
                         interstitialAd.setFullScreenContentCallback(
                                 new FullScreenContentCallback() {
                                     @Override
                                     public void onAdDismissedFullScreenContent() {
-                                        Log.d(TAG, "The ad was dismissed.");
+                                        Log.e(LOG_TAG, "Interstitial dismissed");
                                         WrapVideoShareActivity.this.interstitialAd = null;
                                         WrapVideoShareActivity.this.ivSAVEit(null);
                                     }
 
                                     @Override
                                     public void onAdFailedToShowFullScreenContent(AdError adError) {
-                                        Log.d(TAG, "The ad failed to show.");
+                                        Log.e(LOG_TAG, "Interstitial failed to show: "
+                                                + adError.getMessage());
+                                        WrapVideoShareActivity.this.interstitialAd = null;
                                         WrapVideoShareActivity.this.ivSAVEit(null);
                                     }
 
                                     @Override
                                     public void onAdShowedFullScreenContent() {
-                                        Log.d(TAG, "The ad was shown.");
+                                        Log.e(LOG_TAG, "📊 Interstitial shown");
+                                        logAdImpression("interstitial", interstitialAdId);
                                     }
 
                                     @Override
                                     public void onAdImpression() {
-                                        Log.d(TAG, "The ad recorded an impression.");
+                                        Log.e(LOG_TAG, "Interstitial impression recorded");
                                     }
 
                                     @Override
                                     public void onAdClicked() {
-                                        Log.d(TAG, "The ad was clicked.");
+                                        Log.e(LOG_TAG, "Interstitial clicked");
+                                        logAdClick("interstitial", interstitialAdId);
                                     }
                                 });
                     }
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        Log.d(TAG, loadAdError.getMessage());
+                        Log.e(LOG_TAG, "❌ Interstitial failed: " + loadAdError.getMessage()
+                                + " | code=" + loadAdError.getCode()
+                                + " | domain=" + loadAdError.getDomain());
                         interstitialAd = null;
                         adIsLoading = false;
                         WrapVideoShareActivity.this.ivSAVEit(null);
@@ -387,9 +549,9 @@ public class WrapVideoShareActivity extends AppCompatActivity {
     }
 
     private void showInterstitial() {
-        // ✅ Premium users skip ads
-        if (isPremium) {
-            Log.d("WrapVideoShare", "Premium user - skipping interstitial");
+        if (isPremium || !adsEnabled || !remoteConfigManager.isInterstitialEnabled()) {
+            Log.e(LOG_TAG, "Skipping interstitial - Premium: " + isPremium
+                    + ", Ads Enabled: " + adsEnabled);
             ivSAVEit(null);
             return;
         }
@@ -397,9 +559,9 @@ public class WrapVideoShareActivity extends AppCompatActivity {
         if (interstitialAd != null) {
             interstitialAd.show(this);
         } else {
-            Log.d(TAG, "The interstitial ad is still loading.");
+            Log.e(LOG_TAG, "Interstitial still loading — calling ivSAVEit directly");
             WrapVideoShareActivity.this.ivSAVEit(null);
-            loadAd();
+            loadInterstitialAd();
         }
     }
 
@@ -410,10 +572,12 @@ public class WrapVideoShareActivity extends AppCompatActivity {
             getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
-                        .setAppearanceLightStatusBars(false);
-                ViewCompat.getWindowInsetsController(getWindow().getDecorView())
-                        .setAppearanceLightNavigationBars(false);
+                WindowInsetsControllerCompat controller =
+                        ViewCompat.getWindowInsetsController(getWindow().getDecorView());
+                if (controller != null) {
+                    controller.setAppearanceLightStatusBars(false);
+                    controller.setAppearanceLightNavigationBars(false);
+                }
             }
         } else {
             getWindow().setFlags(
@@ -426,11 +590,64 @@ public class WrapVideoShareActivity extends AppCompatActivity {
     }
 
     private void applyWindowInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
-            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
-            int navigationBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
-            view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
-            return insets;
-        });
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content),
+                (view, insets) -> {
+                    int statusBarHeight = insets.getInsets(
+                            WindowInsetsCompat.Type.statusBars()).top;
+                    int navigationBarHeight = insets.getInsets(
+                            WindowInsetsCompat.Type.navigationBars()).bottom;
+                    view.setPadding(0, statusBarHeight, 0, navigationBarHeight);
+                    return insets;
+                });
+    }
+
+    // ================= FIREBASE ANALYTICS METHODS =====================
+
+    private void logAdImpression(String adFormat, String adUnitId) {
+        try {
+            Bundle bundle = new Bundle();
+            bundle.putString(FirebaseAnalytics.Param.AD_PLATFORM, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_SOURCE, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_FORMAT, adFormat);
+            bundle.putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId);
+            mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.AD_IMPRESSION, bundle);
+            Log.e(LOG_TAG, "📊 Logged ad_impression - Format: " + adFormat);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error logging ad_impression: " + e.getMessage());
+        }
+    }
+
+    private void logAdClick(String adFormat, String adUnitId) {
+        try {
+            Bundle bundle = new Bundle();
+            bundle.putString(FirebaseAnalytics.Param.AD_PLATFORM, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_SOURCE, "admob");
+            bundle.putString(FirebaseAnalytics.Param.AD_FORMAT, adFormat);
+            bundle.putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId);
+//            mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.AD_CLICK, bundle);
+            Log.e(LOG_TAG, "📊 Logged ad_click - Format: " + adFormat);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error logging ad_click: " + e.getMessage());
+        }
+    }
+
+    private void sendRevenueToFirebase(double value, String currency,
+                                       String adFormat, String adUnitId) {
+        try {
+            if (value > 0) {
+                Bundle bundle = new Bundle();
+                bundle.putDouble(FirebaseAnalytics.Param.VALUE, value);
+                bundle.putString(FirebaseAnalytics.Param.CURRENCY, currency);
+                bundle.putString(FirebaseAnalytics.Param.AD_PLATFORM, "admob");
+                bundle.putString(FirebaseAnalytics.Param.AD_SOURCE, "admob");
+                bundle.putString(FirebaseAnalytics.Param.AD_FORMAT, adFormat);
+                bundle.putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId);
+                mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.AD_IMPRESSION, bundle);
+                Log.e(LOG_TAG, "💰 Revenue sent to Firebase: " + value + " "
+                        + currency + " (" + adFormat + ")");
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error sending revenue: " + e.getMessage());
+        }
     }
 }

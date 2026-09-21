@@ -61,6 +61,10 @@
             android:value="@string/appid"/>
 
         <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            android:value="1573747854530400" />
+
+        <meta-data
             android:name="com.google.android.gms.ads.AD_MANAGER_APP"
             android:value="true"/>
 

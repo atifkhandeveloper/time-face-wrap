@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<defaultsMap>
+    <!-- ✅ Feature flags OFF by default — enabled after Remote Config fetch -->
+    <entry>
+        <key>enable_ads</key>
+        <value>false</value>
+    </entry>
+    <entry>
+        <key>enable_banner</key>
+        <value>false</value>
+    </entry>
+    <entry>
+        <key>enable_interstitial</key>
+        <value>false</value>
+    </entry>
+    <entry>
+        <key>enable_native</key>
+        <value>false</value>
+    </entry>
+    <entry>
+        <key>enable_app_open</key>
+        <value>false</value>
+    </entry>
+    <entry>
+        <key>enable_premium</key>
+        <value>false</value>
+    </entry>
+
+    <!-- ✅ EMPTY ad IDs — no test ads fallback -->
+    <entry>
+        <key>banner_ad_id</key>
+        <value></value>
+    </entry>
+    <entry>
+        <key>interstitial_ad_id</key>
+        <value></value>
+    </entry>
+    <entry>
+        <key>native_ad_id</key>
+        <value></value>
+    </entry>
+    <entry>
+        <key>app_open_ad_id</key>
+        <value></value>
+    </entry>
+
+    <!-- ✅ Timing values -->
+    <entry>
+        <key>ads_show_delay</key>
+        <value>0</value>
+    </entry>
+    <entry>
+        <key>interstitial_interval</key>
+        <value>30</value>
+    </entry>
+    <entry>
+        <key>splash_delay</key>
+        <value>5000</value>
+    </entry>
+    <entry>
+        <key>max_ad_count</key>
+        <value>3</value>
+    </entry>
+    <entry>
+        <key>ad_reset_interval</key>
+        <value>86400</value>
+    </entry>
+    <entry>
+        <key>native_ad_timeout</key>
+        <value>10000</value>
+    </entry>
+</defaultsMap>
